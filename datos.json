@@ -48,11 +48,11 @@
         "tag": "777",
         "tier": "SILVER",
         "rank": "II",
-        "lp": 25,
+        "lp": 6,
         "wins": 100,
-        "losses": 90,
-        "winrate": 52.6,
-        "total_games": 190
+        "losses": 91,
+        "winrate": 52.4,
+        "total_games": 191
     },
     {
         "nombre": "Quesito Azul",
