@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 [
     {
         "nombre": "AU l Thxgzz",
@@ -16817,4 +16818,95 @@
             ]
         }
     }
+=======
+[
+    {
+        "nombre": "AU l Thxgzz",
+        "tag": "777",
+        "tier": "EMERALD",
+        "rank": "IV",
+        "lp": 18,
+        "wins": 167,
+        "losses": 150,
+        "winrate": 52.7,
+        "total_games": 317
+    },
+    {
+        "nombre": "Murs",
+        "tag": "Kaiju",
+        "tier": "EMERALD",
+        "rank": "IV",
+        "lp": 0,
+        "wins": 10,
+        "losses": 13,
+        "winrate": 43.5,
+        "total_games": 23
+    },
+    {
+        "nombre": "AU l Ferry",
+        "tag": "2504",
+        "tier": "GOLD",
+        "rank": "IV",
+        "lp": 19,
+        "wins": 111,
+        "losses": 126,
+        "winrate": 46.8,
+        "total_games": 237
+    },
+    {
+        "nombre": "Quesito Gruyere",
+        "tag": "Out",
+        "tier": "SILVER",
+        "rank": "II",
+        "lp": 36,
+        "wins": 25,
+        "losses": 26,
+        "winrate": 49.0,
+        "total_games": 51
+    },
+    {
+        "nombre": "AU l benji",
+        "tag": "777",
+        "tier": "SILVER",
+        "rank": "II",
+        "lp": 6,
+        "wins": 100,
+        "losses": 91,
+        "winrate": 52.4,
+        "total_games": 191
+    },
+    {
+        "nombre": "Quesito Azul",
+        "tag": "IDK",
+        "tier": "SILVER",
+        "rank": "III",
+        "lp": 26,
+        "wins": 4,
+        "losses": 7,
+        "winrate": 36.4,
+        "total_games": 11
+    },
+    {
+        "nombre": "AU l Osiris",
+        "tag": "2007",
+        "tier": "BRONZE",
+        "rank": "III",
+        "lp": 72,
+        "wins": 10,
+        "losses": 11,
+        "winrate": 47.6,
+        "total_games": 21
+    },
+    {
+        "nombre": "XCriadoenLobosX",
+        "tag": "Toxic",
+        "tier": "BRONZE",
+        "rank": "III",
+        "lp": 35,
+        "wins": 14,
+        "losses": 20,
+        "winrate": 41.2,
+        "total_games": 34
+    }
+>>>>>>> 0d3d9490ffdc1308cfc2ec2b93acbe58eaacb0e4
 ]
