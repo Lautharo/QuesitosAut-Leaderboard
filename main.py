@@ -1,8 +1,16 @@
 import requests
 import json
+import os # Agregamos esto para poder leer los "secretos"
 
-# 1. Tu API Key
-API_KEY = "RGAPI-3422c20e-5e1b-4b6d-899c-5859c8adc65b"
+# 1. Tu API Key secreta
+API_KEY = os.environ.get("RIOT_API_KEY")
+
+# Ponemos un freno de seguridad por si no encuentra la llave
+if not API_KEY:
+    print("❌ ERROR: No se encontró la RIOT_API_KEY.")
+    exit()
+
+# 2. La lista de tu equipo (sigue igual...)
 
 # 2. La lista de tu equipo (Nombre, Tag)
 JUGADORES = [
