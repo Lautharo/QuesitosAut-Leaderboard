@@ -1,18 +1,16 @@
 import requests
 import json
-import os # Agregamos esto para poder leer los "secretos"
+import os
+import time
+from datetime import datetime
 
-# 1. Tu API Key secreta
+# 1. Tu API Key
 API_KEY = os.environ.get("RIOT_API_KEY")
-
-# Ponemos un freno de seguridad por si no encuentra la llave
 if not API_KEY:
-    print("❌ ERROR: No se encontró la RIOT_API_KEY.")
-    exit()
+    API_KEY = "RIOT_API_KEY"
 
-# 2. La lista de tu equipo (sigue igual...)
+headers = {"X-Riot-Token": API_KEY}
 
-# 2. La lista de tu equipo (Nombre, Tag)
 JUGADORES = [
     {"nombre": "AU l Thxgzz", "tag": "777"},
     {"nombre": "AU l Ferry", "tag": "2504"},
@@ -21,89 +19,93 @@ JUGADORES = [
     {"nombre": "Murs", "tag": "Kaiju"},
     {"nombre": "XCriadoenLobosX", "tag": "Toxic"},
     {"nombre": "Quesito Azul", "tag": "IDK"},
-    {"nombre": "Quesito Gruyere", "tag": "Out"},
+    {"nombre": "Quesito Gruyere", "tag": "Out"}
 ]
 
-headers = {
-    "X-Riot-Token": API_KEY
+QUEUES = {"soloq": 420, "flex": 440, "aram": 450}
+
+# Mapa de hechizos de invocador para las imágenes
+SUMMONERS = {
+    4: "SummonerFlash", 12: "SummonerTeleport", 14: "SummonerIgnite",
+    11: "SummonerSmite", 6: "SummonerHaste", 7: "SummonerHeal",
+    21: "SummonerBarrier", 3: "SummonerExhaust", 32: "SummonerSnowball"
 }
 
-# 3. Valores para enseñar a Python qué rango es mejor
 VALOR_TIER = {
     "CHALLENGER": 9000, "GRANDMASTER": 8000, "MASTER": 7000,
     "DIAMOND": 6000, "EMERALD": 5000, "PLATINUM": 4000,
     "GOLD": 3000, "SILVER": 2000, "BRONZE": 1000,
     "IRON": 0, "UNRANKED": -1000
 }
+VALOR_RANK = {"I": 400, "II": 300, "III": 200, "IV": 100, "": 0}
 
-VALOR_RANK = {
-    "I": 400, "II": 300, "III": 200, "IV": 100, "": 0
-}
+def obtener_todo():
+    try:
+        with open("datos.json", "r", encoding="utf-8") as f:
+            viejos = json.load(f)
+            historiales_map = {j['nombre']: j.get('historiales', {"soloq": [], "flex": [], "aram": []}) for j in viejos}
+    except:
+        historiales_map = {}
 
-def obtener_stats_equipo():
     datos_finales = []
+    fecha_hoy = datetime.now().strftime("%d/%m")
 
     for jugador in JUGADORES:
-        game_name = jugador['nombre']
-        tag_line = jugador['tag']
-        
+        name, tag = jugador['nombre'], jugador['tag']
+        print(f"Scouteando a {name}...")
         try:
-            print(f"🔄 Buscando a {game_name}#{tag_line}...")
-            
-            # PASO 1: PUUID
-            url_account = f"https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{game_name}/{tag_line}"
-            res_account = requests.get(url_account, headers=headers)
-            res_account.raise_for_status()
-            puuid = res_account.json()['puuid']
+            url_acc = f"https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{name}/{tag}"
+            puuid = requests.get(url_acc, headers=headers).json()['puuid']
 
-            # PASO 2: Stats
-            url_league = f"https://la2.api.riotgames.com/lol/league/v4/entries/by-puuid/{puuid}"
-            res_league = requests.get(url_league, headers=headers)
-            res_league.raise_for_status()
-            stats = res_league.json()
+            leagues = requests.get(f"https://la2.api.riotgames.com/lol/league/v4/entries/by-puuid/{puuid}", headers=headers).json()
+            sq = next((q for q in leagues if q['queueType'] == 'RANKED_SOLO_5x5'), None)
+            fl = next((q for q in leagues if q['queueType'] == 'RANKED_FLEX_SR'), None)
 
-            soloq_stats = next((queue for queue in stats if queue['queueType'] == 'RANKED_SOLO_5x5'), None)
-
-            # Armamos el diccionario
-            datos_jugador = {
-                "nombre": game_name,
-                "tag": tag_line,
-                "tier": "UNRANKED",
-                "rank": "",
-                "lp": 0,
-                "wins": 0,
-                "losses": 0,
-                "winrate": 0,
-                "total_games": 0
+            d = {
+                "nombre": name, "tag": tag, "last_game": "---",
+                "historiales": historiales_map.get(name, {"soloq": [], "flex": [], "aram": []}),
+                "soloq": {"tier": "UNRANKED", "rank": "", "lp": 0, "wins": 0, "losses": 0, "wr": 0, "puntos_grafica": 0},
+                "flex": {"tier": "UNRANKED", "rank": "", "lp": 0, "wins": 0, "losses": 0, "wr": 0, "puntos_grafica": 0},
+                "aram": {"tier": "UNRANKED", "wins": 0, "losses": 0, "wr": 0, "puntos_grafica": 0},
+                "partidas": {"soloq": [], "flex": [], "aram": []}
             }
 
-            if soloq_stats:
-                datos_jugador["tier"] = soloq_stats['tier']
-                datos_jugador["rank"] = soloq_stats['rank']
-                datos_jugador["lp"] = soloq_stats['leaguePoints']
-                datos_jugador["wins"] = soloq_stats['wins']
-                datos_jugador["losses"] = soloq_stats['losses']       
+            if sq: d["soloq"].update({"tier": sq['tier'], "rank": sq['rank'], "lp": sq['leaguePoints'], "wins": sq['wins'], "losses": sq['losses'], "wr": round((sq['wins']/(sq['wins']+sq['losses']))*100,1), "puntos_grafica": VALOR_TIER.get(sq['tier'], 0) + VALOR_RANK.get(sq['rank'], 0) + sq['leaguePoints']})
+            if fl: d["flex"].update({"tier": fl['tier'], "rank": fl['rank'], "lp": fl['leaguePoints'], "wins": fl['wins'], "losses": fl['losses'], "wr": round((fl['wins']/(fl['wins']+fl['losses']))*100,1), "puntos_grafica": VALOR_TIER.get(fl['tier'], 0) + VALOR_RANK.get(fl['rank'], 0) + fl['leaguePoints']})
 
-                total_games = soloq_stats['wins'] + soloq_stats['losses']
+            for modo, qid in QUEUES.items():
+                m_ids = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue={qid}&start=0&count=10", headers=headers).json()
+                for mid in m_ids:
+                    time.sleep(1.2)
+                    m_data = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/{mid}", headers=headers).json()
+                    info = m_data['info']
+                    me = next(p for p in info['participants'] if p['puuid'] == puuid)
+                    
+                    p_res = {
+                        "win": me['win'], "champ": me['championName'], "lvl": me['champLevel'],
+                        "k": me['kills'], "d": me['deaths'], "a": me['assists'],
+                        "cs": me['totalMinionsKilled'] + me['neutralMinionsKilled'],
+                        "items": [me[f'item{i}'] for i in range(7)],
+                        "role": me['individualPosition'],
+                        "summoners": [SUMMONERS.get(me['summoner1Id'], "SummonerFlash"), SUMMONERS.get(me['summoner2Id'], "SummonerIgnite")],
+                        "runas": [me['perks']['styles'][0]['selections'][0]['perk'], me['perks']['styles'][1]['style']],
+                        "lp_change": 22 if me['win'] else 19, # Simulación de PL
+                        "duracion": f"{info['gameDuration'] // 60}:{info['gameDuration'] % 60:02d}",
+                        "fecha": datetime.fromtimestamp(info['gameEndTimestamp']/1000).strftime('%d/%m'),
+                        "team1": [], "team2": []
+                    }
+                    for p in info['participants']:
+                        p_info = {"name": p['riotIdGameName'], "champ": p['championName']}
+                        if p['teamId'] == 100: p_res["team1"].append(p_info)
+                        else: p_res["team2"].append(p_info)
+                    
+                    d["partidas"][modo].append(p_res)
+                    if d["last_game"] == "---": d["last_game"] = p_res["fecha"]
 
-                datos_jugador["total_games"] = total_games
-                datos_jugador["winrate"] = round((soloq_stats['wins'] / total_games) * 100, 1)
+            datos_finales.append(d)
+        except Exception as e: print(f"Error: {e}")
 
-            datos_finales.append(datos_jugador)
-            print(f"✅ Listo!")
+    with open("datos.json", "w", encoding="utf-8") as f:
+        json.dump(datos_finales, f, indent=4, ensure_ascii=False)
 
-        except requests.exceptions.RequestException as e:
-            print(f"❌ Error con {game_name}#{tag_line}")
-
-    # PASO 3: ORDENAR LA LISTA DE MEJOR A PEOR (¡Lo nuevo!)
-    datos_finales.sort(key=lambda x: VALOR_TIER.get(x['tier'], -1000) + VALOR_RANK.get(x['rank'], 0) + x['lp'], reverse=True)
-
-    # PASO 4: Guardar todo en el archivo JSON
-    print("\n💾 Guardando archivo datos.json ordenado...")
-    with open("datos.json", "w", encoding="utf-8") as archivo:
-        json.dump(datos_finales, archivo, indent=4, ensure_ascii=False)
-    
-    print("🚀 ¡Proceso terminado!")
-
-# Ejecutar la función
-obtener_stats_equipo()
+obtener_todo()
