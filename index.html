@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Los Secretos Del Team - Leaderboard</title>
+    <style>
+        /* Un poco de CSS para darle estilo oscuro tipo LoL */
+        body {
+            background-color: #111111;
+            color: #ffffff;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .contenedor {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            color: #f0e6d2; /* Color doradito tipo cliente de LoL */
+            border-bottom: 2px solid #c8aa6e;
+            padding-bottom: 10px;
+        }
+        /* Estilo de la tarjeta de cada jugador */
+        .jugador-card {
+            background-color: #1e2328;
+            border: 1px solid #c8aa6e;
+            border-radius: 8px;
+            padding: 15px 25px;
+            margin-bottom: 15px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+        }
+
+        .nombre-tag {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: #f0e6d2;
+        }
+
+        .tag {
+            color: #888;
+            font-size: 0.8em;
+        }
+
+        .stats p {
+            margin: 5px 0;
+            color: #a09b8c;
+        }
+
+        .rango-info {
+            text-align: right;
+        }
+
+        .elo {
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #00d4d4; /* Un celestito para el rango */
+            margin: 0;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="contenedor">
+        <h1>🏆 Leaderboard del Team</h1>
+
+        <div id="lista-jugadores">
+            <p style="text-align: center;">Cargando los datos de la grieta...</p>
+        </div>
+    </div>
+
+    <script>
+        // Esta función lee el archivo datos.json
+        fetch('datos.json')
+        .then(respuesta => respuesta.json())
+        .then(datos => {
+        const contenedor = document.getElementById('lista-jugadores');
+        contenedor.innerHTML = ''; // Borramos el texto de "Cargando..."
+
+        // Recorremos cada jugador del JSON
+        datos.forEach(jugador => {
+        // Armamos el HTML para cada uno
+        const tarjeta = `
+        <div class="jugador-card">
+        <div class="stats">
+        <div class="nombre-tag">${jugador.nombre} <span class="tag">#${jugador.tag}</span></div>
+        <p style="color: #c8aa6e; font-weight: bold;">${jugador.total_games} Partidas</p>
+        <p>WR: ${jugador.winrate}% (${jugador.wins}W / ${jugador.losses}L)</p>
+        </div>
+        <div class="rango-info">
+        <p class="elo">${jugador.tier} ${jugador.rank}</p>
+        <p style="margin: 0; color: #c8aa6e;">${jugador.lp} LP</p>
+        </div>
+        </div>
+        `;
+        // Lo agregamos a la página
+        contenedor.innerHTML += tarjeta;
+        });
+        })
+        .catch(error => {
+        console.error("Error al cargar el JSON:", error);
+        document.getElementById('lista-jugadores').innerHTML = '<p>Error al cargar los datos.</p>';
+        });
+    </script>
+
+</body>
+</html>
