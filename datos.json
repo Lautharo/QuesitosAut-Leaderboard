@@ -3575,11 +3575,11 @@
         "soloq": {
             "tier": "SILVER",
             "rank": "II",
-            "lp": 27,
+            "lp": 8,
             "wins": 101,
-            "losses": 91,
-            "wr": 52.6,
-            "puntos_grafica": 2327
+            "losses": 92,
+            "wr": 52.3,
+            "puntos_grafica": 2308
         },
         "flex": {
             "tier": "SILVER",
@@ -3599,6 +3599,80 @@
         },
         "partidas": {
             "soloq": [
+                {
+                    "win": false,
+                    "champ": "AurelionSol",
+                    "lvl": 17,
+                    "k": 5,
+                    "d": 7,
+                    "a": 13,
+                    "cs": 233,
+                    "items": [
+                        3157,
+                        3116,
+                        3175,
+                        2503,
+                        4630,
+                        1026,
+                        3340
+                    ],
+                    "role": "MIDDLE",
+                    "summoners": [
+                        "SummonerTeleport",
+                        "SummonerFlash"
+                    ],
+                    "runas": [
+                        8229,
+                        8400
+                    ],
+                    "lp_change": 19,
+                    "duracion": "35:38",
+                    "fecha": "19/04",
+                    "team1": [
+                        {
+                            "name": "MAKINA20SEXUAL1T",
+                            "champ": "Teemo"
+                        },
+                        {
+                            "name": "EDDY JUICE",
+                            "champ": "Sylas"
+                        },
+                        {
+                            "name": "thedragongerd",
+                            "champ": "Malzahar"
+                        },
+                        {
+                            "name": "L13BE",
+                            "champ": "Yunara"
+                        },
+                        {
+                            "name": "mama cocina",
+                            "champ": "Mel"
+                        }
+                    ],
+                    "team2": [
+                        {
+                            "name": "DrkLucian",
+                            "champ": "Sett"
+                        },
+                        {
+                            "name": "SorrySoyPapá",
+                            "champ": "Kayn"
+                        },
+                        {
+                            "name": "AU l benji",
+                            "champ": "AurelionSol"
+                        },
+                        {
+                            "name": "ELpitinCortito",
+                            "champ": "Ezreal"
+                        },
+                        {
+                            "name": "EmotionalControl",
+                            "champ": "Senna"
+                        }
+                    ]
+                },
                 {
                     "win": true,
                     "champ": "AurelionSol",
@@ -4262,80 +4336,6 @@
                         {
                             "name": "Nazgûl Rey Brujo",
                             "champ": "Leona"
-                        }
-                    ]
-                },
-                {
-                    "win": true,
-                    "champ": "AurelionSol",
-                    "lvl": 18,
-                    "k": 12,
-                    "d": 9,
-                    "a": 18,
-                    "cs": 215,
-                    "items": [
-                        3157,
-                        2503,
-                        3175,
-                        8010,
-                        3116,
-                        1058,
-                        3340
-                    ],
-                    "role": "MIDDLE",
-                    "summoners": [
-                        "SummonerTeleport",
-                        "SummonerFlash"
-                    ],
-                    "runas": [
-                        8229,
-                        8400
-                    ],
-                    "lp_change": 22,
-                    "duracion": "39:02",
-                    "fecha": "18/04",
-                    "team1": [
-                        {
-                            "name": "Tidaldgg",
-                            "champ": "TahmKench"
-                        },
-                        {
-                            "name": "touuers",
-                            "champ": "Kindred"
-                        },
-                        {
-                            "name": "AU l benji",
-                            "champ": "AurelionSol"
-                        },
-                        {
-                            "name": "Valm040408",
-                            "champ": "MissFortune"
-                        },
-                        {
-                            "name": "pantheonmilove",
-                            "champ": "Neeko"
-                        }
-                    ],
-                    "team2": [
-                        {
-                            "name": "CpapuFitness Man",
-                            "champ": "Sett"
-                        },
-                        {
-                            "name": "buum",
-                            "champ": "Kayn"
-                        },
-                        {
-                            "name": "Retrazo",
-                            "champ": "Jhin"
-                        },
-                        {
-                            "name": "LordIce26",
-                            "champ": "Ashe"
-                        },
-                        {
-                            "name": "Gonna19",
-                            "champ": "Morgana"
                         }
                     ]
                 }
