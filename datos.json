@@ -26,11 +26,22 @@
         "tag": "2504",
         "tier": "GOLD",
         "rank": "IV",
-        "lp": 19,
-        "wins": 110,
+        "lp": 39,
+        "wins": 111,
         "losses": 125,
-        "winrate": 46.8,
-        "total_games": 235
+        "winrate": 47.0,
+        "total_games": 236
+    },
+    {
+        "nombre": "AU l benji",
+        "tag": "777",
+        "tier": "SILVER",
+        "rank": "II",
+        "lp": 44,
+        "wins": 100,
+        "losses": 89,
+        "winrate": 52.9,
+        "total_games": 189
     },
     {
         "nombre": "Quesito Gruyere",
@@ -42,17 +53,6 @@
         "losses": 26,
         "winrate": 49.0,
         "total_games": 51
-    },
-    {
-        "nombre": "AU l benji",
-        "tag": "777",
-        "tier": "SILVER",
-        "rank": "II",
-        "lp": 23,
-        "wins": 99,
-        "losses": 89,
-        "winrate": 52.7,
-        "total_games": 188
     },
     {
         "nombre": "Quesito Azul",
