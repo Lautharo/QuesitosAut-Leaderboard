@@ -201,7 +201,6 @@ function actualizarGrafica() {
     );
     const labels = jugadorMasLargo.historiales[modoActual].map(h => h.fecha);
 
-    // Acá sacamos el .slice(0, 5) para que dibuje a TODOS
     // 1. ACHICAR LOS CÍRCULOS
     const datasets = jugadoresConHistorial.map(j => {
         const colorJugador = COLORES_JUGADORES[j.nombre] || '#ffffff';
@@ -210,9 +209,9 @@ function actualizarGrafica() {
             data: j.historiales[modoActual].map(h => h.puntos),
             borderColor: colorJugador,
             backgroundColor: colorJugador,
-            borderWidth: 2,       // Línea un poco más fina para que se vea más limpio
-            pointRadius: 2,       // <-- Círculos más chicos en reposo (antes estaba en 4)
-            pointHoverRadius: 5,  // <-- Círculo cuando le pasás el mouse encima
+            borderWidth: 2,       
+            pointRadius: 2,       
+            pointHoverRadius: 5,  
             tension: 0.1
         };
     });
@@ -224,7 +223,7 @@ function actualizarGrafica() {
             responsive: true, 
             maintainAspectRatio: false, 
             
-            // NUEVO: Agregamos margen interno al canvas para que nada se corte arriba
+            // Margen interno al canvas para que nada se corte arriba
             layout: {
                 padding: {
                     top: 15,
@@ -253,10 +252,8 @@ function actualizarGrafica() {
                     labels: { 
                         color: '#9ca3af', 
                         usePointStyle: true, 
-                        // 1. ACHICAMOS LOS CÍRCULOS DE LA LEYENDA
                         boxWidth: 6,   
                         boxHeight: 6,  
-                        // 3. SEPARAMOS LA LEYENDA DEL GRÁFICO (para que Benji respire)
                         padding: 15,
                         font: { size: 11 }
                     } 
@@ -272,56 +269,14 @@ function actualizarGrafica() {
                 },
                 zoom: {
                     pan: {
-                        // 2. MOVIMIENTO LIBRE
                         enabled: true,
                         mode: 'xy',
-                        threshold: 10 // Hace que el clic sea menos sensible para no confundirlo con un tooltip
+                        threshold: 10 
                     },
                     zoom: {
                         wheel: { enabled: true }, 
-                        drag: false, // Apagamos el zoom por selección (recuadro)
+                        drag: false, 
                         pinch: { enabled: true }, 
-                        mode: 'xy', 
-                    }
-                }
-            } 
-        },
-            
-            scales: {
-                y: {
-                    suggestedMin: 1000, 
-                    suggestedMax: 6000,
-                    grid: { color: 'rgba(255, 255, 255, 0.05)' }
-                },
-                x: {
-                    grid: { color: 'rgba(255, 255, 255, 0.05)' }
-                }
-            },
-            plugins: { 
-                legend: { 
-                    labels: { color: '#9ca3af', usePointStyle: true, boxWidth: 6 } 
-                },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const jugador = context.dataset.label;
-                            const rangoFormateado = decodificarPuntos(context.parsed.y);
-                            return `${jugador}: ${rangoFormateado}`;
-                        }
-                    }
-                },
-                
-                // 3. MOVERSE LIBREMENTE SIN RECUADRO DE ZOOM
-                zoom: {
-                    pan: {
-                        enabled: true,
-                        mode: 'xy', // Movimiento libre para todos lados
-                        modifierKey: null, 
-                    },
-                    zoom: {
-                        wheel: { enabled: true }, // Zoom SÓLO con la ruedita del mouse
-                        drag: { enabled: false }, // <-- Apagamos el recuadro de selección
-                        pinch: { enabled: true }, // Permite pellizcar en celulares
                         mode: 'xy', 
                     }
                 }
