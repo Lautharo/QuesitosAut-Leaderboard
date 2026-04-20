@@ -241,18 +241,9 @@ function actualizarGrafica() {
                     suggestedMin: 1000, 
                     suggestedMax: 6000,
                     grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                    // NUEVO: Reemplazamos los números por las iniciales
+                    // NUEVO: Apagamos por completo las letras/números de la izquierda
                     ticks: {
-                        color: '#9ca3af',
-                        font: { weight: 'bold', size: 12 },
-                        callback: function(value) {
-                            const rangos = {
-                                0: 'I', 1000: 'B', 2000: 'S', 3000: 'G', 
-                                4000: 'P', 5000: 'E', 6000: 'D', 7000: 'M', 
-                                8000: 'GM', 9000: 'C'
-                            };
-                            return rangos[value] || ''; // Muestra la letra, o nada si está en medio
-                        }
+                        display: false
                     }
                 },
                 x: {
