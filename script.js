@@ -3,13 +3,28 @@ const API_URL = "https://quesitos-backend.onrender.com";
 let datosGlobales = [];
 let modoActual = 'soloq';
 let miGrafica = null;
-let LOL_VER = "16.8.1"; // Versión base, pero ahora se actualiza sola
+let LOL_VER = "14.8.1"; 
 
-// Títulos personalizados para los puestos de ARAM
 const ARAM_TITLES = [
     "ARAM GOD", "ARAM KING", "ARAM PRINCE", "ARAM DUKE", 
     "ARAM KNIGHT", "ARAM SQUIRE", "ARAM PEASANT", "ARAM MINION"
 ];
+
+// --- MAPA DE RUNAS (Transforma los IDs a imágenes de Riot) ---
+const RUNES_MAP = {
+    8000: '7201_Precision', 8100: '7200_Domination', 8200: '7202_Sorcery', 8300: '7203_Whimsy', 8400: '7204_Resolve',
+    8005: 'Precision/PressTheAttack/PressTheAttack', 8008: 'Precision/LethalTempo/LethalTempoTemp',
+    8021: 'Precision/FleetFootwork/FleetFootwork', 8010: 'Precision/Conqueror/Conqueror',
+    8112: 'Domination/Electrocute/Electrocute', 8124: 'Domination/Predator/Predator',
+    8128: 'Domination/DarkHarvest/DarkHarvest', 9923: 'Domination/HailOfBlades/HailOfBlades',
+    8214: 'Sorcery/SummonAery/SummonAery', 8229: 'Sorcery/ArcaneComet/ArcaneComet',
+    8230: 'Sorcery/PhaseRush/PhaseRush', 8351: 'Inspiration/GlacialAugment/GlacialAugment',
+    8360: 'Inspiration/UnsealedSpellbook/UnsealedSpellbook', 8369: 'Inspiration/FirstStrike/FirstStrike',
+    8437: 'Resolve/GraspOfTheUndying/GraspOfTheUndying', 8439: 'Resolve/VeteranAftershock/VeteranAftershock',
+    8465: 'Resolve/Guardian/Guardian'
+};
+
+const getRuneIcon = (id) => RUNES_MAP[id] ? `https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/${RUNES_MAP[id]}.png` : '';
 
 function cerrarAviso() {
     document.getElementById('overlay-mantenimiento').style.display = 'none';
@@ -20,11 +35,9 @@ function cambiarModo(modo) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(`btn-${modo}`).classList.add('active');
     
-    // Mostramos u ocultamos el cartel de ARAM
-    if (modo === 'aram') {
-        document.getElementById('aram-aviso').style.display = 'block';
-    } else {
-        document.getElementById('aram-aviso').style.display = 'none';
+    const avisoAram = document.getElementById('aram-aviso');
+    if (avisoAram) {
+        avisoAram.style.display = (modo === 'aram') ? 'block' : 'none';
     }
 
     renderizarTabla();
@@ -116,19 +129,32 @@ function mostrarScouter(j) {
             partidas.forEach(p => {
                 const card = document.createElement('div');
                 card.className = `match-card ${p.win ? 'win' : 'loss'}`;
-                const team1 = p.team1.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${pl.champ}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'"><b>${pl.name}</b></div>`).join('');
-                const team2 = p.team2.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${pl.champ}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'"><b>${pl.name}</b></div>`).join('');
+                
+                // Fallback para campeones de 2026 en los equipos
+                const renderTeam = (team) => team.map(pl => `
+                    <div class="player-row ${pl.name === j.nombre ? 'me' : ''}">
+                        <img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${pl.champ}.png" onerror="this.src='https://ui-avatars.com/api/?name=${pl.champ}&background=1c1f26&color=d4b55c&size=32&font-size=0.6'">
+                        <b>${pl.name}</b>
+                    </div>`).join('');
 
+                // Fallback inteligente para items viejos (como Luden's Echo)
                 const renderItems = p.items.map(id => {
-                    const url = id > 0 ? `https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/item/${id}.png` : '';
-                    return `<div class="m-item-box">${url ? `<img src="${url}">` : ''}</div>`;
+                    if (id > 0) {
+                        return `<div class="m-item-box"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/item/${id}.png" onerror="this.src='https://ddragon.leagueoflegends.com/cdn/13.24.1/img/item/${id}.png'"></div>`;
+                    }
+                    return `<div class="m-item-box"></div>`;
                 }).join('');
 
-                const roleMapping = { 'middle': 'mid', 'jungle': 'jung', 'bottom': 'bot', 'utility': 'support', 'top': 'top' };
+                // Mapeo perfecto para el icono SVG vectorial de las posiciones
+                const roleMapping = { 'middle': 'middle', 'jungle': 'jungle', 'bottom': 'bottom', 'utility': 'utility', 'top': 'top' };
                 const pos = p.role ? roleMapping[p.role.toLowerCase()] || 'none' : 'none';
-                const posIcon = pos !== 'none' && !isAram ? `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-positions/position-icon-${pos}.png` : '';
+                const posIcon = pos !== 'none' && !isAram ? `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-champ-select/global/default/svg/position-${pos}.svg` : '';
 
                 const fixSum = (s) => String(s).replace('Ignite', 'Dot');
+                
+                // Imágenes de Runas obtenidas del mapeo
+                const rune1 = p.runas && p.runas[0] ? getRuneIcon(p.runas[0]) : '';
+                const rune2 = p.runas && p.runas[1] ? getRuneIcon(p.runas[1]) : '';
 
                 card.innerHTML = `
                     <div class="m-info">
@@ -139,13 +165,17 @@ function mostrarScouter(j) {
                     </div>
                     <div class="m-champ-block">
                         <div class="m-champ-img-container">
-                            <img class="main-champ" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${p.champ}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'">
+                            <img class="main-champ" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${p.champ}.png" onerror="this.src='https://ui-avatars.com/api/?name=${p.champ}&background=1c1f26&color=d4b55c&size=64&font-size=0.6'">
                             <span class="m-lvl">${p.lvl}</span>
                             ${posIcon ? `<img src="${posIcon}" class="role-icon">` : ''}
                         </div>
                         <div class="m-spells-runes">
                             <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${p.summoners ? fixSum(p.summoners[0]) : 'SummonerFlash'}.png">
                             <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${p.summoners ? fixSum(p.summoners[1]) : 'SummonerDot'}.png">
+                        </div>
+                        <div class="m-spells-runes" style="margin-left: 4px;">
+                             ${rune1 ? `<img class="m-rune" src="${rune1}">` : '<div class="m-rune"></div>'}
+                             ${rune2 ? `<img class="m-rune" src="${rune2}" style="width:16px; height:16px; margin: 0 auto; background:none;">` : '<div class="m-rune" style="width:16px; height:16px;"></div>'}
                         </div>
                     </div>
                     <div class="m-stats">
@@ -167,17 +197,15 @@ function mostrarScouter(j) {
         });
 }
 
-// --- ARRANQUE OPTIMIZADO: BUSCA LA VERSIÓN MÁS NUEVA DE RIOT Y LUEGO CARGA ---
 document.getElementById('update-time').textContent = "SINCRONIZANDO PARCHE..."; 
 
 fetch("https://ddragon.leagueoflegends.com/api/versions.json")
     .then(res => res.json())
     .then(versions => {
-        LOL_VER = versions[0]; // Esto siempre agarra el último parche oficial disponible
+        LOL_VER = versions[0]; 
         iniciarLeaderboard();
     })
     .catch(() => {
-        // Si falla Riot, usamos la versión de respaldo y arrancamos igual
         iniciarLeaderboard();
     });
 
