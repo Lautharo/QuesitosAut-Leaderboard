@@ -678,3 +678,28 @@ h1 {
     flex-direction: column;
     justify-content: center;
 }
+
+/* --- RESUMEN DIARIO EN EL SCOUTER --- */
+.resumen-diario {
+	background: #1a202c;
+	border: 1px solid #2d3748;
+	padding: 10px 15px;
+	border-radius: 8px;
+	margin: 20px 0 10px 0;
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	border-left: 4px solid var(--amarillo-pro);
+}
+
+	.resumen-diario .fecha-label {
+		font-weight: 800;
+		color: var(--amarillo-brillante);
+		text-transform: uppercase;
+		font-size: 0.9rem;
+	}
+
+	.resumen-diario .balance-total {
+		font-size: 1rem;
+		font-weight: 900;
+	}

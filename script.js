@@ -355,37 +355,50 @@ function mostrarScouter(j) {
             document.getElementById('scouter-nombre').textContent = `SCOUTER: ${j.nombre}`;
             lista.innerHTML = ''; 
 
-            partidas.forEach(p => {
+            if (partidas.length === 0) {
+                lista.innerHTML = '<div style="color:gray; text-align:center; padding:20px;">No se encontraron partidas recientes en este modo.</div>';
+                return;
+            }
+
+            let ultimaFechaVista = "";
+            let balanceDelDia = 0;
+            let contenedorDiaActual = null;
+
+            // Procesamos las partidas
+            partidas.forEach((p, index) => {
+                const fechaCorta = p.fecha.split(' ')[0]; // Extrae solo el "DD/MM"
+
+                // Si cambiamos de día, primero imprimimos el balance del día anterior (si no es la primera vez)
+                if (ultimaFechaVista !== "" && ultimaFechaVista !== fechaCorta) {
+                    insertarBannerDiario(lista, ultimaFechaVista, balanceDelDia);
+                    balanceDelDia = 0; // Reseteamos para el nuevo día
+                }
+
+                ultimaFechaVista = fechaCorta;
+                balanceDelDia += p.lp_change; // Sumamos (o restamos) los PL de esta partida
+
+                // --- DIBUJO DE LA TARJETA DE PARTIDA (Tu código original) ---
                 const card = document.createElement('div');
                 card.className = `match-card ${p.win ? 'win' : 'loss'}`;
+                
+                // (Mantenemos tu lógica de items, runes, teams, etc.)
                 const team1 = p.team1.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${pl.champ}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'"><b>${pl.name}</b></div>`).join('');
                 const team2 = p.team2.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${pl.champ}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'"><b>${pl.name}</b></div>`).join('');
-
-                // --- 1. Separar los 6 ítems normales del Trinket (7mo ítem) ---
                 const normalItems = p.items.slice(0, 6).map(id => {
                     const url = id > 0 ? `https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/item/${id}.png` : '';
                     return `<div class="m-item-box">${url ? `<img src="${url}">` : ''}</div>`;
                 }).join('');
-
                 const trinketId = p.items[6];
                 const trinketUrl = trinketId > 0 ? `https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/item/${trinketId}.png` : '';
-                const renderTrinket = `<div class="m-trinket-box">${trinketUrl ? `<img src="${trinketUrl}">` : ''}</div>`;
-
-                // --- 2. Links oficiales de OP.GG para los roles ---
                 const roleMapping = { 'middle': 'mid', 'jungle': 'jungle', 'bottom': 'adc', 'utility': 'support', 'top': 'top' };
                 const pos = p.role ? roleMapping[p.role.toLowerCase()] || 'none' : 'none';
                 const posIcon = pos !== 'none' && !isAram ? `https://s-lol-web.op.gg/images/icon/icon-position-${pos}.svg` : '';
-
                 const fixSum = (s) => String(s).replace('Ignite', 'Dot');
-
-                // Generar los íconos de las runas
                 const primaryRuneIcon = getRuneIcon(p.runes ? p.runes[0] : 0);
                 const secondaryRuneIcon = getRuneIcon(p.runes ? p.runes[1] : 0);
-                
                 const r1Html = primaryRuneIcon ? `<img class="m-rune primary" src="${primaryRuneIcon}">` : `<div class="m-rune primary placeholder"></div>`;
                 const r2Html = secondaryRuneIcon ? `<img class="m-rune secondary" src="${secondaryRuneIcon}">` : `<div class="m-rune secondary placeholder"></div>`;
 
-                // --- 3. Lógica para mostrar PL Reales o "Calibrando" ---
                 let lpHtml = '';
                 if (!isAram) {
                     if (p.lp_change === 0) {
@@ -393,19 +406,7 @@ function mostrarScouter(j) {
                     } else {
                         const lpSign = p.lp_change > 0 ? '+' : '';
                         const lpClass = p.lp_change > 0 ? 'lp-gain' : 'lp-loss';
-                        
-                        // Lógica para detectar el Ascenso/Descenso
-                        let estadoExtra = "";
-                        // Si gané PL, y mis PL actuales menos lo que gané da negativo, crucé de liga hacia arriba
-                        if (p.lp_change > 0 && (p.lp_current - p.lp_change < 0)) {
-                            estadoExtra = ' <span style="color:#d4b55c; font-size: 0.8em">(Ascenso)</span>';
-                        } 
-                        // Si perdí PL, y mis PL actuales menos lo que perdí da más de 100, caí de liga
-                        else if (p.lp_change < 0 && (p.lp_current - p.lp_change >= 100)) {
-                            estadoExtra = ' <span style="color:#9ca3af; font-size: 0.8em">(Descenso)</span>';
-                        }
-
-                        lpHtml = `<br><span class="${lpClass}">${lpSign}${p.lp_change} LP${estadoExtra}</span>`;
+                        lpHtml = `<br><span class="${lpClass}">${lpSign}${p.lp_change} LP</span>`;
                     }
                 }
 
@@ -427,10 +428,7 @@ function mostrarScouter(j) {
                                 <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${p.summoners ? fixSum(p.summoners[0]) : 'SummonerFlash'}.png">
                                 <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${p.summoners ? fixSum(p.summoners[1]) : 'SummonerDot'}.png">
                             </div>
-                            <div class="m-sr-col">
-                                ${r1Html}
-                                ${r2Html}
-                            </div>
+                            <div class="m-sr-col">${r1Html}${r2Html}</div>
                         </div>
                     </div>
                     <div class="m-stats">
@@ -439,7 +437,7 @@ function mostrarScouter(j) {
                     </div>
                     <div class="m-items-container">
                         <div class="m-items">${normalItems}</div>
-                        ${renderTrinket}
+                        <div class="m-trinket-box">${trinketUrl ? `<img src="${trinketUrl}">` : ''}</div>
                     </div>
                     <div class="m-teams">
                         <div class="team-col">${team1}</div>
@@ -447,12 +445,38 @@ function mostrarScouter(j) {
                     </div>
                 `;
                 lista.appendChild(card);
+
+                // Si es la última partida del array, imprimimos el balance de ese último día
+                if (index === partidas.length - 1) {
+                    insertarBannerDiario(lista, fechaCorta, balanceDelDia);
+                }
             });
+
             document.getElementById('seccion-scouter').scrollIntoView({ behavior: 'smooth' });
         })
         .catch(err => {
-            lista.innerHTML = '<div style="color:#f25757; text-align:center; padding: 20px;">Error al cargar las partidas. El servidor puede estar despertando.</div>';
+            lista.innerHTML = '<div style="color:#f25757; text-align:center; padding: 20px;">Error al cargar las partidas.</div>';
         });
+}
+
+// Función auxiliar para crear el cartelito de balance
+function insertarBannerDiario(contenedor, fecha, balance) {
+    const banner = document.createElement('div');
+    banner.className = 'resumen-diario';
+    
+    const colorBalance = balance > 0 ? '#2add9c' : (balance < 0 ? '#f25757' : '#9ca3af');
+    const signo = balance > 0 ? '+' : '';
+    
+    banner.innerHTML = `
+        <div class="fecha-label">RESUMEN DEL DÍA ${fecha}</div>
+        <div class="balance-total" style="color: ${colorBalance}">
+            TOTAL: ${signo}${balance} LP
+        </div>
+    `;
+    
+    // Lo insertamos ANTES de las partidas de ese día (o después, según prefieras el orden)
+    // En este caso, para que quede abajo de las partidas del día, simplemente lo agregamos al final
+    contenedor.appendChild(banner);
 }
 
 document.getElementById('update-time').textContent = "SINCRONIZANDO PARCHE..."; 
