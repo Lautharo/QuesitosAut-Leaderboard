@@ -202,6 +202,18 @@ function actualizarGrafica() {
     const ctx = document.getElementById('graficoElo').getContext('2d');
     if (miGrafica) miGrafica.destroy();
     
+    // --- 1. EL FIX: AUTO-PARCHEAR A LAS CUENTAS NUEVAS O SMURFS ---
+    const hoy = new Date().toLocaleDateString('es-AR', {day: '2-digit', month: '2-digit'});
+    datosGlobales.forEach(j => {
+        if (j.historiales && j.historiales[modoActual] && j.historiales[modoActual].length === 0 && j[modoActual].tier !== "UNRANKED") {
+            j.historiales[modoActual].push({
+                fecha: hoy,
+                puntos: j[modoActual].puntos_grafica
+            });
+        }
+    });
+
+    // --- 2. APLICAR FILTROS ---
     const mostrarSmurfs = document.getElementById('filtro-smurf') ? document.getElementById('filtro-smurf').checked : true;
     const filtroJugador = document.getElementById('filtro-jugador') ? document.getElementById('filtro-jugador').value : 'TODOS';
 
@@ -214,22 +226,32 @@ function actualizarGrafica() {
     const jugadoresConHistorial = jugadoresA_Mostrar.filter(j => j.historiales && j.historiales[modoActual] && j.historiales[modoActual].length > 0);
     if (jugadoresConHistorial.length === 0) return;
 
-    const jugadorMasLargo = jugadoresConHistorial.reduce((max, j) => 
-        j.historiales[modoActual].length > max.historiales[modoActual].length ? j : max
-    );
-    const labels = jugadorMasLargo.historiales[modoActual].map(h => h.fecha);
+    // --- 3. ALINEACIÓN PERFECTA DE FECHAS EN EL EJE X ---
+    const todasLasFechas = new Set();
+    jugadoresConHistorial.forEach(j => {
+        j.historiales[modoActual].forEach(h => todasLasFechas.add(h.fecha));
+    });
+    const labels = Array.from(todasLasFechas);
 
     const datasets = jugadoresConHistorial.map(j => {
         const colorJugador = obtenerColor(j.nombre);
+        
+        // Mapea los puntos exactamente al día que corresponden
+        let dataAlineada = labels.map(fecha => {
+            const registro = j.historiales[modoActual].find(h => h.fecha === fecha);
+            return registro ? registro.puntos : null;
+        });
+
         return {
             label: j.nombre,
-            data: j.historiales[modoActual].map(h => h.puntos),
+            data: dataAlineada,
             borderColor: colorJugador,
             backgroundColor: colorJugador,
             borderWidth: 2,       
-            pointRadius: 2,       
-            pointHoverRadius: 5,  
-            tension: 0.1
+            pointRadius: 3,       
+            pointHoverRadius: 6,  
+            tension: 0.1,
+            spanGaps: true // Conecta las líneas si un jugador no jugó un día
         };
     });
 
@@ -240,7 +262,7 @@ function actualizarGrafica() {
             responsive: true, 
             maintainAspectRatio: false, 
             layout: { padding: { top: 15, right: 20 } },
-            interaction: { mode: 'nearest', intersect: true },
+            interaction: { mode: 'nearest', intersect: false },
             scales: {
                 y: {
                     suggestedMin: 1000, 
