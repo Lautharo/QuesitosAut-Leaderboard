@@ -278,21 +278,37 @@ function actualizarGrafica() {
             data: dataAlineada,
             borderColor: colorJugador,
             backgroundColor: colorJugador,
-            borderWidth: 2,       
-            pointRadius: 3,       
-            pointHoverRadius: 6,  
-            tension: 0.1,
+            borderWidth: 3,       // Aumentamos a 3 para más grosor
+            pointRadius: 2,       // Achicamos el punto normal
+            pointHoverRadius: 7,  // Agrandamos el punto al pasar el mouse
+            tension: 0.4,         // ¡La magia de las curvas! (0 es recto, 0.4 es suave)
             spanGaps: true 
         };
     });
 
-    miGrafica = new Chart(ctx, { 
+   miGrafica = new Chart(ctx, { 
         type: 'line', 
         data: { labels, datasets }, 
         options: { 
             responsive: true, 
             maintainAspectRatio: false, 
             layout: { padding: { top: 15, right: 20 } },
+            
+            // --- NUEVO: OPTIMIZACIÓN EXTREMA Y ANIMACIONES ---
+            normalized: true, 
+            animation: {
+                duration: 800,
+                easing: 'easeOutQuart'
+            },
+            transitions: {
+                zoom: {
+                    animation: {
+                        duration: 100 
+                    }
+                }
+            },
+            // -------------------------------------------------
+
             interaction: { mode: 'nearest', intersect: false },
             scales: {
                 y: {
@@ -311,6 +327,7 @@ function actualizarGrafica() {
                     labels: { color: '#9ca3af', usePointStyle: true, boxWidth: 6, boxHeight: 6, padding: 15, font: { size: 11 } } 
                 },
                 tooltip: {
+                    animation: { duration: 150 }, // Tooltip más fluido
                     callbacks: {
                         label: function(context) {
                             return `${context.dataset.label}: ${decodificarPuntos(context.parsed.y)}`;
@@ -318,7 +335,7 @@ function actualizarGrafica() {
                     }
                 },
                 zoom: {
-                    pan: { enabled: true, mode: 'xy', threshold: 10 },
+                    pan: { enabled: true, mode: 'xy', threshold: 5 }, // Reacciona más rápido al arrastrar
                     zoom: { wheel: { enabled: true }, drag: false, pinch: { enabled: true }, mode: 'xy' }
                 }
             } 
