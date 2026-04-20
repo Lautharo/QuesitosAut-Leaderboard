@@ -121,7 +121,7 @@ function mostrarScouter(j) {
     document.getElementById('scouter-nombre').textContent = `SCOUTER: ${j.nombre}`;
     lista.innerHTML = ''; 
 
-    // Al leer del datos.json, ya tenemos las partidas guardadas para este jugador
+    // Al leer del datos.json local, extraemos las partidas al instante
     const partidas = j.partidas[modoActual] || [];
 
     if (partidas.length === 0) {
@@ -146,15 +146,16 @@ function mostrarScouter(j) {
             return `<div class="m-item-box"></div>`;
         }).join('');
 
-        // 1. TRADUCTOR DE POSICIÓN (Arreglo definitivo para íconos)
+        // 1. TRADUCTOR DE POSICIÓN (SVG Vectoriales inquebrantables de Riot)
         const rawRole = p.role ? p.role.toLowerCase() : 'none';
-        const roleMapping = { 'middle': 'mid', 'jungle': 'jungle', 'bottom': 'bottom', 'utility': 'support', 'top': 'top' };
+        // Tu JSON manda: "middle", "bottom", "utility", "jungle", "top". Mapeamos al archivo SVG exacto:
+        const roleMapping = { 'middle': 'middle', 'jungle': 'jungle', 'bottom': 'bottom', 'utility': 'utility', 'top': 'top' };
         const pos = roleMapping[rawRole] || 'none';
         
-        // Solo muestra el icono si tiene posición válida y NO es ARAM
-        const posIcon = (pos !== 'none' && !isAram) ? `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-positions/position-icon-${pos}.png` : '';
+        // Solo carga el icono si la posición existe y NO es ARAM
+        const posIcon = (pos !== 'none' && !isAram) ? `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/svg/position-${pos}.svg` : '';
 
-        // 2. RUNAS Y HECHIZOS (A prueba de balas)
+        // 2. RUNAS Y HECHIZOS
         const fixSum = (s) => String(s).replace('Ignite', 'Dot');
         const sum1 = p.summoners && p.summoners[0] ? fixSum(p.summoners[0]) : 'SummonerFlash';
         const sum2 = p.summoners && p.summoners[1] ? fixSum(p.summoners[1]) : 'SummonerDot';
@@ -162,7 +163,6 @@ function mostrarScouter(j) {
         const rune1 = p.runas && p.runas.length > 0 ? getRuneIcon(p.runas[0]) : '';
         const rune2 = p.runas && p.runas.length > 1 ? getRuneIcon(p.runas[1]) : '';
 
-        // Nombre de la cola (SoloQ, Flex o ARAM)
         const queueName = isAram ? 'ARAM' : (modoActual === 'soloq' ? 'Solo / Dúo' : 'Flex');
 
         card.innerHTML = `
@@ -176,7 +176,7 @@ function mostrarScouter(j) {
                 <div class="m-champ-img-container">
                     <img class="main-champ" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${p.champ}.png" onerror="this.src='https://ui-avatars.com/api/?name=${p.champ}&background=1c1f26&color=d4b55c&size=64&font-size=0.6'">
                     <span class="m-lvl">${p.lvl}</span>
-                    ${posIcon ? `<img src="${posIcon}" class="role-icon">` : ''}
+                    ${posIcon ? `<img src="${posIcon}" class="role-icon" style="background: rgba(28, 31, 38, 0.9); padding: 3px; border: 1px solid #2d3748; border-radius: 50%;">` : ''}
                 </div>
                 <div class="m-spells-runes">
                     <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${sum1}.png">
