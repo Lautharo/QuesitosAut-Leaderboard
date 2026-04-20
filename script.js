@@ -1,10 +1,15 @@
-// 1. ACÁ PONÉS EL LINK DE TU SERVIDOR EN RENDER (Sin la barra / al final)
 const API_URL = "https://quesitos-backend.onrender.com"; 
 
 let datosGlobales = [];
 let modoActual = 'soloq';
 let miGrafica = null;
 const LOL_VER = "14.8.1"; 
+
+// Títulos personalizados para los puestos de ARAM
+const ARAM_TITLES = [
+    "ARAM GOD", "ARAM KING", "ARAM PRINCE", "ARAM DUKE", 
+    "ARAM KNIGHT", "ARAM SQUIRE", "ARAM PEASANT", "ARAM MINION"
+];
 
 function cerrarAviso() {
     document.getElementById('overlay-mantenimiento').style.display = 'none';
@@ -23,7 +28,6 @@ function renderizarTabla() {
     tbody.innerHTML = '';
     if (datosGlobales.length === 0) return;
 
-    // En ARAM ordena por total_partidas. En SoloQ/Flex por LPs.
     datosGlobales.sort((a, b) => b[modoActual].puntos_grafica - a[modoActual].puntos_grafica);
 
     datosGlobales.forEach((j, i) => {
@@ -32,13 +36,15 @@ function renderizarTabla() {
         const color = getComputedStyle(document.documentElement).getPropertyValue(`--color-${stats.tier.toLowerCase()}`).trim() || '#8c52ff';
         const icon = `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-emblem/emblem-${stats.tier.toLowerCase()}.png`;
 
-        // Lógicas visuales para ocultar rango en ARAM y mostrar Partidas
         const partidasTotales = isAram ? stats.total_partidas : (stats.wins + stats.losses);
-        const textoPJs = isAram ? `<b style="color:white;">${partidasTotales}</b> <span style="font-size:0.8em">PJs (Recientes)</span>` : `<b style="color:white;">${partidasTotales}</b> <span style="font-size:0.8em">PJs</span>`;
+        const textoPJs = isAram ? `<b style="color:white;">${partidasTotales}</b> <span style="font-size:0.8em">PJs (Season)</span>` : `<b style="color:white;">${partidasTotales}</b> <span style="font-size:0.8em">PJs</span>`;
         
+        // Asignamos el título de ARAM según su posición 'i' en la tabla
+        const rangoTexto = isAram ? (ARAM_TITLES[i] || "ARAM NOOB") : `${stats.tier} ${stats.rank}`;
+
         const rangoHTML = isAram ? 
-            `<div class="lp-text-centered" style="color: var(--amarillo-pro); font-size: 1rem; position: relative;">ARAM KING</div>` : 
-            `<div class="lp-progress-container"><div class="lp-progress-fill" style="width: ${Math.min(stats.lp, 100)}%; background-color: ${color}"></div><div class="lp-text-centered">${stats.tier} ${stats.rank} - ${stats.lp} LP</div></div>`;
+            `<div class="lp-text-centered" style="color: var(--amarillo-pro); font-size: 1rem; position: relative;">${rangoTexto}</div>` : 
+            `<div class="lp-progress-container"><div class="lp-progress-fill" style="width: ${Math.min(stats.lp, 100)}%; background-color: ${color}"></div><div class="lp-text-centered">${rangoTexto} - ${stats.lp} LP</div></div>`;
         
         const wrHTML = isAram ? 
             `<b>${stats.wr}%</b><br><small style="font-size:0.7em; color:var(--color-subtexto)">Últimos 5 PJs</small>` : 
@@ -115,14 +121,15 @@ function mostrarScouter(j) {
                 const pos = p.role ? roleMapping[p.role.toLowerCase()] || 'none' : 'none';
                 const posIcon = pos !== 'none' && !isAram ? `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-positions/position-icon-${pos}.png` : '';
 
-                const fixSum = (s) => String(s).replace('Ignite', 'Dot');
+                // Ocultamos los PL si es ARAM (cero suposiciones)
+                const lpHTML = !isAram ? `<br><span class="${p.win ? 'lp-gain' : 'lp-loss'}">${p.win ? '+' : '-'}${p.lp_change} LP</span>` : '';
 
                 card.innerHTML = `
                     <div class="m-info">
                         <b style="color:${p.win ? '#2add9c' : '#f25757'}">${p.win ? 'Victoria' : 'Derrota'}</b>
                         <span style="color: var(--amarillo-pro); font-weight: bold; font-size: 0.75rem;">${p.queue_name}</span><br>
                         ${p.fecha} • ${p.duracion}
-                        ${!isAram ? `<br><span class="${p.win ? 'lp-gain' : 'lp-loss'}">${p.win ? '+' : '-'}${p.lp_change || 20} LP</span>` : ''}
+                        ${lpHTML}
                     </div>
                     <div class="m-champ-block">
                         <div class="m-champ-img-container">
@@ -131,8 +138,8 @@ function mostrarScouter(j) {
                             ${posIcon ? `<img src="${posIcon}" class="role-icon">` : ''}
                         </div>
                         <div class="m-spells-runes">
-                            <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${p.summoners ? fixSum(p.summoners[0]) : 'SummonerFlash'}.png">
-                            <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${p.summoners ? fixSum(p.summoners[1]) : 'SummonerDot'}.png">
+                            <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${p.summoners[0]}.png">
+                            <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${p.summoners[1]}.png">
                         </div>
                     </div>
                     <div class="m-stats">
