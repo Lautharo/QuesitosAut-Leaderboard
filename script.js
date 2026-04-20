@@ -1,48 +1,15 @@
-const API_URL = "https://quesitos-backend.onrender.com"; // SIN la barra al final
+const API_URL = "https://quesitos-backend.onrender.com"; 
 
 let datosGlobales = [];
 let modoActual = 'soloq';
 let miGrafica = null;
-let LOL_VER = "14.8.1"; 
+let LOL_VER = "16.8.1"; // Versión base, pero ahora se actualiza sola
 
+// Títulos personalizados para los puestos de ARAM
 const ARAM_TITLES = [
     "ARAM GOD", "ARAM KING", "ARAM PRINCE", "ARAM DUKE", 
     "ARAM KNIGHT", "ARAM SQUIRE", "ARAM PEASANT", "ARAM MINION"
 ];
-
-// --- MAPA DE HECHIZOS ---
-const SUMMONER_MAP = {
-    4: "SummonerFlash", 14: "SummonerDot", 11: "SummonerSmite", 
-    12: "SummonerTeleport", 7: "SummonerHeal", 3: "SummonerExhaust", 
-    21: "SummonerBarrier", 6: "SummonerHaste", 32: "SummonerSnowball", 1: "SummonerBoost"
-};
-
-// --- MAPA DE RUNAS ---
-const RUNES_MAP = {
-    8005: 'Precision/PressTheAttack/PressTheAttack', 8008: 'Precision/LethalTempo/LethalTempoTemp',
-    8021: 'Precision/FleetFootwork/FleetFootwork', 8010: 'Precision/Conqueror/Conqueror',
-    8112: 'Domination/Electrocute/Electrocute', 8124: 'Domination/Predator/Predator',
-    8128: 'Domination/DarkHarvest/DarkHarvest', 9923: 'Domination/HailOfBlades/HailOfBlades',
-    8214: 'Sorcery/SummonAery/SummonAery', 8229: 'Sorcery/ArcaneComet/ArcaneComet',
-    8230: 'Sorcery/PhaseRush/PhaseRush', 8351: 'Inspiration/GlacialAugment/GlacialAugment',
-    8360: 'Inspiration/UnsealedSpellbook/UnsealedSpellbook', 8369: 'Inspiration/FirstStrike/FirstStrike',
-    8437: 'Resolve/GraspOfTheUndying/GraspOfTheUndying', 8439: 'Resolve/VeteranAftershock/VeteranAftershock',
-    8465: 'Resolve/Guardian/Guardian',
-    8000: '7201_Precision', 8100: '7200_Domination', 8200: '7202_Sorcery', 8300: '7203_Whimsy', 8400: '7204_Resolve'
-};
-
-const getSummonerIcon = (val) => {
-    if (!val) return 'SummonerFlash';
-    if (!isNaN(val)) return SUMMONER_MAP[val] || 'SummonerFlash';
-    return String(val).replace('Ignite', 'Dot');
-};
-
-const getRuneIcon = (id) => {
-    if (!id) return '';
-    let path = RUNES_MAP[id];
-    if (path) return `https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/${path}.png`;
-    return `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7200_domination.png`;
-};
 
 function cerrarAviso() {
     document.getElementById('overlay-mantenimiento').style.display = 'none';
@@ -53,8 +20,12 @@ function cambiarModo(modo) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(`btn-${modo}`).classList.add('active');
     
-    const avisoAram = document.getElementById('aram-aviso');
-    if (avisoAram) avisoAram.style.display = (modo === 'aram') ? 'block' : 'none';
+    // Mostramos u ocultamos el cartel de ARAM
+    if (modo === 'aram') {
+        document.getElementById('aram-aviso').style.display = 'block';
+    } else {
+        document.getElementById('aram-aviso').style.display = 'none';
+    }
 
     renderizarTabla();
     actualizarGrafica();
@@ -74,7 +45,7 @@ function renderizarTabla() {
         const icon = `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-emblem/emblem-${stats.tier.toLowerCase()}.png`;
 
         const partidasTotales = isAram ? stats.total_partidas : (stats.wins + stats.losses);
-        const textoPJs = isAram ? `<b style="color:white;">${partidasTotales || 0}</b> <span style="font-size:0.8em">PJs (Season)</span>` : `<b style="color:white;">${partidasTotales}</b> <span style="font-size:0.8em">PJs</span>`;
+        const textoPJs = isAram ? `<b style="color:white;">${partidasTotales}</b> <span style="font-size:0.8em">PJs (Season)</span>` : `<b style="color:white;">${partidasTotales}</b> <span style="font-size:0.8em">PJs</span>`;
         
         const rangoTexto = isAram ? (ARAM_TITLES[i] || "ARAM NOOB") : `${stats.tier} ${stats.rank}`;
 
@@ -83,7 +54,7 @@ function renderizarTabla() {
             `<div class="lp-progress-container"><div class="lp-progress-fill" style="width: ${Math.min(stats.lp, 100)}%; background-color: ${color}"></div><div class="lp-text-centered">${rangoTexto} - ${stats.lp} LP</div></div>`;
         
         const wrHTML = isAram ? 
-            `<b>${stats.wr || 0}%</b><br><small style="font-size:0.7em; color:var(--color-subtexto)">Últimos 5 PJs</small>` : 
+            `<b>${stats.wr}%</b><br><small style="font-size:0.7em; color:var(--color-subtexto)">Últimos 5 PJs</small>` : 
             `<b>${stats.wr}%</b><br><small style="font-size:0.7em; color:var(--color-subtexto)">${stats.wins}W / ${stats.losses}L</small>`;
 
         const tr = document.createElement('tr');
@@ -137,76 +108,44 @@ function mostrarScouter(j) {
     lista.innerHTML = '<div style="color:var(--amarillo-pro); text-align:center; padding: 20px;">Analizando historial en tiempo real...</div>';
 
     fetch(`${API_URL}/api/scouter/${j.puuid}/${modoActual}`)
-        .then(res => {
-            if (!res.ok) throw new Error(`El servidor devolvió error ${res.status}`);
-            return res.json();
-        })
+        .then(res => res.json())
         .then(partidas => {
-            // Escudo Anti-Crash para el backend
-            if (!Array.isArray(partidas)) {
-                console.error("Error del backend:", partidas);
-                lista.innerHTML = `<div style="color:#f25757; text-align:center; padding: 20px;">Error obteniendo partidas: ${partidas.error || 'Datos no disponibles.'}</div>`;
-                document.getElementById('scouter-nombre').textContent = `SCOUTER: ${j.nombre}`;
-                return;
-            }
-
             document.getElementById('scouter-nombre').textContent = `SCOUTER: ${j.nombre}`;
             lista.innerHTML = ''; 
-
-            if (partidas.length === 0) {
-                lista.innerHTML = '<div style="color:var(--color-subtexto); text-align:center; padding: 20px;">No hay partidas recientes en esta cola.</div>';
-                return;
-            }
 
             partidas.forEach(p => {
                 const card = document.createElement('div');
                 card.className = `match-card ${p.win ? 'win' : 'loss'}`;
-                
-                const renderTeam = (team) => team.map(pl => `
-                    <div class="player-row ${pl.name === j.nombre ? 'me' : ''}">
-                        <img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${pl.champ}.png" onerror="this.src='https://ui-avatars.com/api/?name=${pl.champ}&background=1c1f26&color=d4b55c&size=32&font-size=0.6'">
-                        <b>${pl.name}</b>
-                    </div>`).join('');
+                const team1 = p.team1.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${pl.champ}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'"><b>${pl.name}</b></div>`).join('');
+                const team2 = p.team2.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${pl.champ}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'"><b>${pl.name}</b></div>`).join('');
 
                 const renderItems = p.items.map(id => {
-                    if (id > 0) {
-                        return `<div class="m-item-box"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/item/${id}.png" onerror="this.src='https://ddragon.leagueoflegends.com/cdn/13.24.1/img/item/${id}.png'"></div>`;
-                    }
-                    return `<div class="m-item-box"></div>`;
+                    const url = id > 0 ? `https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/item/${id}.png` : '';
+                    return `<div class="m-item-box">${url ? `<img src="${url}">` : ''}</div>`;
                 }).join('');
 
-                // MAPEO EXACTO DE POSICIONES (Arreglado en PNG Oficial)
-                const roleMapping = { 'middle': 'mid', 'jungle': 'jungle', 'bottom': 'bot', 'utility': 'support', 'top': 'top' };
+                const roleMapping = { 'middle': 'mid', 'jungle': 'jung', 'bottom': 'bot', 'utility': 'support', 'top': 'top' };
                 const pos = p.role ? roleMapping[p.role.toLowerCase()] || 'none' : 'none';
                 const posIcon = pos !== 'none' && !isAram ? `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-positions/position-icon-${pos}.png` : '';
 
-                // Runas y Hechizos Asegurados
-                const rune1 = p.runas && p.runas.length > 0 ? getRuneIcon(p.runas[0]) : '';
-                const rune2 = p.runas && p.runas.length > 1 ? getRuneIcon(p.runas[1]) : '';
-
-                const sum1 = p.summoners ? getSummonerIcon(p.summoners[0]) : 'SummonerFlash';
-                const sum2 = p.summoners ? getSummonerIcon(p.summoners[1]) : 'SummonerDot';
+                const fixSum = (s) => String(s).replace('Ignite', 'Dot');
 
                 card.innerHTML = `
                     <div class="m-info">
                         <b style="color:${p.win ? '#2add9c' : '#f25757'}">${p.win ? 'Victoria' : 'Derrota'}</b>
-                        <span style="color: var(--amarillo-pro); font-weight: bold; font-size: 0.75rem;">${p.queue_name || (isAram ? 'ARAM' : 'Clasificatoria')}</span><br>
+                        <span style="color: var(--amarillo-pro); font-weight: bold; font-size: 0.75rem;">${p.queue_name}</span><br>
                         ${p.fecha} • ${p.duracion}
                         ${!isAram ? `<br><span class="${p.win ? 'lp-gain' : 'lp-loss'}">${p.win ? '+' : '-'}${p.lp_change || 20} LP</span>` : ''}
                     </div>
                     <div class="m-champ-block">
                         <div class="m-champ-img-container">
-                            <img class="main-champ" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${p.champ}.png" onerror="this.src='https://ui-avatars.com/api/?name=${pl.champ}&background=1c1f26&color=d4b55c&size=64&font-size=0.6'">
+                            <img class="main-champ" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${p.champ}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'">
                             <span class="m-lvl">${p.lvl}</span>
                             ${posIcon ? `<img src="${posIcon}" class="role-icon">` : ''}
                         </div>
                         <div class="m-spells-runes">
-                            <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${sum1}.png">
-                            <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${sum2}.png">
-                        </div>
-                        <div class="m-spells-runes" style="margin-left: 4px;">
-                             ${rune1 ? `<img class="m-rune" src="${rune1}">` : '<div class="m-rune" style="border:1px solid #333;"></div>'}
-                             ${rune2 ? `<img class="m-rune" src="${rune2}" style="width:16px; height:16px; margin: 0 auto; background:none;">` : '<div class="m-rune" style="width:16px; height:16px; border:1px solid #333; margin:0 auto;"></div>'}
+                            <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${p.summoners ? fixSum(p.summoners[0]) : 'SummonerFlash'}.png">
+                            <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${p.summoners ? fixSum(p.summoners[1]) : 'SummonerDot'}.png">
                         </div>
                     </div>
                     <div class="m-stats">
@@ -215,8 +154,8 @@ function mostrarScouter(j) {
                     </div>
                     <div class="m-items">${renderItems}</div>
                     <div class="m-teams">
-                        <div class="team-col">${renderTeam(p.team1)}</div>
-                        <div class="team-col">${renderTeam(p.team2)}</div>
+                        <div class="team-col">${team1}</div>
+                        <div class="team-col">${team2}</div>
                     </div>
                 `;
                 lista.appendChild(card);
@@ -224,23 +163,21 @@ function mostrarScouter(j) {
             document.getElementById('seccion-scouter').scrollIntoView({ behavior: 'smooth' });
         })
         .catch(err => {
-            console.error("Error JS/Red:", err);
-            lista.innerHTML = `<div style="color:#f25757; text-align:center; padding: 20px;">
-                <b>Error: ${err.message}</b><br>
-                <small style="color:#aaa;">Si dice "Failed to fetch", renová tu API Key de Riot en Render o esperá a que el servidor despierte.</small>
-            </div>`;
+            lista.innerHTML = '<div style="color:#f25757; text-align:center; padding: 20px;">Error al cargar las partidas. El servidor puede estar despertando.</div>';
         });
 }
 
+// --- ARRANQUE OPTIMIZADO: BUSCA LA VERSIÓN MÁS NUEVA DE RIOT Y LUEGO CARGA ---
 document.getElementById('update-time').textContent = "SINCRONIZANDO PARCHE..."; 
 
 fetch("https://ddragon.leagueoflegends.com/api/versions.json")
     .then(res => res.json())
     .then(versions => {
-        LOL_VER = versions[0]; 
+        LOL_VER = versions[0]; // Esto siempre agarra el último parche oficial disponible
         iniciarLeaderboard();
     })
     .catch(() => {
+        // Si falla Riot, usamos la versión de respaldo y arrancamos igual
         iniciarLeaderboard();
     });
 

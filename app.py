@@ -27,10 +27,12 @@ QUEUES = {"soloq": 420, "flex": 440, "aram": 450}
 VALOR_TIER = {"CHALLENGER": 9000, "GRANDMASTER": 8000, "MASTER": 7000, "DIAMOND": 6000, "EMERALD": 5000, "PLATINUM": 4000, "GOLD": 3000, "SILVER": 2000, "BRONZE": 1000, "IRON": 0, "UNRANKED": -1000}
 VALOR_RANK = {"I": 400, "II": 300, "III": 200, "IV": 100, "": 0}
 
+# Nombres exactos de DataDragon para que no se rompan las imágenes
 SUMMONERS = {
     4: "SummonerFlash", 14: "SummonerDot", 11: "SummonerSmite", 
     12: "SummonerTeleport", 7: "SummonerHeal", 3: "SummonerExhaust", 
-    21: "SummonerBarrier", 6: "SummonerHaste", 32: "SummonerSnowball", 1: "SummonerBoost"
+    21: "SummonerBarrier", 6: "SummonerHaste", 32: "SummonerSnowball", 
+    1: "SummonerBoost"
 }
 
 cache_leaderboard = {"datos": [], "ultima_actualizacion": 0}
@@ -76,6 +78,7 @@ def get_leaderboard():
             if sq: d["soloq"].update({"tier": sq['tier'], "rank": sq['rank'], "lp": sq['leaguePoints'], "wins": sq['wins'], "losses": sq['losses'], "wr": round((sq['wins']/(sq['wins']+sq['losses']))*100,1), "puntos_grafica": VALOR_TIER.get(sq['tier'], 0) + VALOR_RANK.get(sq['rank'], 0) + sq['leaguePoints']})
             if fl: d["flex"].update({"tier": fl['tier'], "rank": fl['rank'], "lp": fl['leaguePoints'], "wins": fl['wins'], "losses": fl['losses'], "wr": round((fl['wins']/(fl['wins']+fl['losses']))*100,1), "puntos_grafica": VALOR_TIER.get(fl['tier'], 0) + VALOR_RANK.get(fl['rank'], 0) + fl['leaguePoints']})
             
+            # --- ARAM: Buscamos hasta 100 de cada una para tener un total real ---
             aram_n = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue=450&count=100", headers=headers).json()
             aram_k = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue=720&count=100", headers=headers).json()
             
@@ -110,6 +113,7 @@ def get_scouter(puuid, modo):
     try:
         m_ids = []
         if modo == 'aram':
+            # Buscamos 10 de Normal y 10 de KAOS para mezclarlas
             ids_n = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue=450&count=10", headers=headers).json()
             ids_k = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue=720&count=10", headers=headers).json()
             m_ids = (ids_n if isinstance(ids_n, list) else []) + (ids_k if isinstance(ids_k, list) else [])
@@ -118,14 +122,17 @@ def get_scouter(puuid, modo):
             res = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue={qid}&start=0&count=10", headers=headers)
             m_ids = res.json() if res.status_code == 200 else []
 
+        # Descargamos los detalles de todas
         raw_matches = []
         for mid in m_ids:
             time.sleep(0.05)
             m_data = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/{mid}", headers=headers).json()
             if 'info' in m_data: raw_matches.append(m_data)
 
+        # MAGIA: Ordenamos TODAS las partidas por fecha exacta (de más nueva a más vieja)
         raw_matches.sort(key=lambda x: x['info']['gameEndTimestamp'], reverse=True)
 
+        # Nos quedamos solo con las 10 más recientes reales
         for m_data in raw_matches[:10]:
             info = m_data['info']
             me = next(p for p in info['participants'] if p['puuid'] == puuid)
@@ -138,12 +145,6 @@ def get_scouter(puuid, modo):
 
             dt_utc = datetime.fromtimestamp(info['gameEndTimestamp']/1000, tz=pytz.utc)
             
-            # Recolección segura de Runas (Para que no tire error si faltan datos)
-            try:
-                runas_list = [me['perks']['styles'][0]['selections'][0]['perk'], me['perks']['styles'][1]['style']]
-            except:
-                runas_list = []
-
             p_res = {
                 "win": me['win'], "champ": me['championName'], "lvl": me['champLevel'],
                 "k": me['kills'], "d": me['deaths'], "a": me['assists'],
@@ -151,13 +152,12 @@ def get_scouter(puuid, modo):
                 "items": [me.get(f'item{i}', 0) for i in range(7)],
                 "role": me.get('individualPosition', 'ARAM'),
                 "summoners": [SUMMONERS.get(me.get('summoner1Id'), "SummonerFlash"), SUMMONERS.get(me.get('summoner2Id'), "SummonerFlash")],
-                "runas": runas_list,
                 "duracion": f"{info['gameDuration'] // 60}:{info['gameDuration'] % 60:02d}",
                 "fecha": dt_utc.astimezone(arg_tz).strftime('%d/%m %H:%M'),
                 "queue_name": q_name,
-                "lp_change": 0 if modo == 'aram' else (22 if me['win'] else 19), 
-                "team1": [{"name": p.get('riotIdGameName', p.get('summonerName', 'Jugador')), "champ": p['championName']} for p in info['participants'][:5]],
-                "team2": [{"name": p.get('riotIdGameName', p.get('summonerName', 'Jugador')), "champ": p['championName']} for p in info['participants'][5:]]
+                "lp_change": 0 if modo == 'aram' else (22 if me['win'] else 19), # Cero suposiciones en ARAM
+                "team1": [{"name": p['riotIdGameName'], "champ": p['championName']} for p in info['participants'][:5]],
+                "team2": [{"name": p['riotIdGameName'], "champ": p['championName']} for p in info['participants'][5:]]
             }
             partidas.append(p_res)
     except Exception as e:
