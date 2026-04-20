@@ -135,31 +135,18 @@ function renderizarTabla() {
         const tr = document.createElement('tr');
         tr.className = 'fila-jugador';
         
-        // 1. Si este jugador ya estaba seleccionado antes, le vuelve a poner el color
+        // Memoria de selección
         if (jugadorSeleccionado && jugadorSeleccionado.puuid === j.puuid) {
             tr.classList.add('seleccionada');
         }
 
         tr.onclick = () => {
-            // 2. Guardamos en memoria quién es el seleccionado
             jugadorSeleccionado = j;
-            
-            // 3. Le quitamos el color a todas las filas para que solo haya una marcada
             document.querySelectorAll('.fila-jugador').forEach(f => f.classList.remove('seleccionada'));
-            
-            // 4. Se lo ponemos a la fila que acabamos de tocar
             tr.classList.add('seleccionada');
-            
-            // 5. Abrimos el historial (Scouter)
             mostrarScouter(j);
         };
 
-        // Aquí sigue tu código normal del tr.innerHTML...
-        tr.innerHTML = `
-            <td style="color:var(--amarillo-pro); font-weight:800">${i + 1}</td>
-            <td>
-                <span style="color:white; font-weight:bold; font-size:1.1rem;">${j.nombre}</span> 
-                ...
         tr.innerHTML = `
             <td style="color:var(--amarillo-pro); font-weight:800">${i + 1}</td>
             <td>
