@@ -132,14 +132,20 @@ function mostrarScouter(j) {
                 const team1 = p.team1.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${pl.champ}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'"><b>${pl.name}</b></div>`).join('');
                 const team2 = p.team2.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${pl.champ}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'"><b>${pl.name}</b></div>`).join('');
 
-                const renderItems = p.items.map(id => {
+                // --- 1. Separar los 6 ítems normales del Trinket (7mo ítem) ---
+                const normalItems = p.items.slice(0, 6).map(id => {
                     const url = id > 0 ? `https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/item/${id}.png` : '';
                     return `<div class="m-item-box">${url ? `<img src="${url}">` : ''}</div>`;
                 }).join('');
 
-                const roleMapping = { 'middle': 'mid', 'jungle': 'jung', 'bottom': 'bot', 'utility': 'support', 'top': 'top' };
+                const trinketId = p.items[6];
+                const trinketUrl = trinketId > 0 ? `https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/item/${trinketId}.png` : '';
+                const renderTrinket = `<div class="m-trinket-box">${trinketUrl ? `<img src="${trinketUrl}">` : ''}</div>`;
+
+                // --- 2. Links oficiales de OP.GG para los roles ---
+                const roleMapping = { 'middle': 'mid', 'jungle': 'jungle', 'bottom': 'adc', 'utility': 'support', 'top': 'top' };
                 const pos = p.role ? roleMapping[p.role.toLowerCase()] || 'none' : 'none';
-                const posIcon = pos !== 'none' && !isAram ? `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-positions/position-icon-${pos}.png` : '';
+                const posIcon = pos !== 'none' && !isAram ? `https://s-lol-web.op.gg/images/icon/icon-position-${pos}.svg` : '';
 
                 const fixSum = (s) => String(s).replace('Ignite', 'Dot');
 
@@ -178,7 +184,10 @@ function mostrarScouter(j) {
                         <div class="m-kda">${p.k} / <span style="color:#f25757">${p.d}</span> / ${p.a}</div>
                         <div class="m-cs">${p.cs} CS</div>
                     </div>
-                    <div class="m-items">${renderItems}</div>
+                    <div class="m-items-container">
+                        <div class="m-items">${normalItems}</div>
+                        ${renderTrinket}
+                    </div>
                     <div class="m-teams">
                         <div class="team-col">${team1}</div>
                         <div class="team-col">${team2}</div>
