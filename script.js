@@ -1,5 +1,5 @@
 // 1. ACÁ PONÉS EL LINK DE TU SERVIDOR EN RENDER (Sin la barra / al final)
-const API_URL = "https://quesitos-backend.onrender.com/"; 
+const API_URL = "https://quesitos-backend.onrender.com"; 
 
 let datosGlobales = [];
 let modoActual = 'soloq';
