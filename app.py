@@ -133,7 +133,6 @@ def get_scouter(puuid, modo):
         raw_matches.sort(key=lambda x: x['info']['gameEndTimestamp'], reverse=True)
 
         # Nos quedamos solo con las 10 más recientes reales
-        # Nos quedamos solo con las 10 más recientes reales
         for m_data in raw_matches[:10]:
             info = m_data['info']
             me = next(p for p in info['participants'] if p['puuid'] == puuid)
@@ -146,10 +145,13 @@ def get_scouter(puuid, modo):
 
             dt_utc = datetime.fromtimestamp(info['gameEndTimestamp']/1000, tz=pytz.utc)
             
-            # --- NUEVO: Extracción de Runas ---
-            perks = me.get('perks', {}).get('styles', [])
-            primary_rune = perks[0]['selections'][0]['perk'] if len(perks) > 0 and len(perks[0].get('selections', [])) > 0 else 0
-            secondary_tree = perks[1]['style'] if len(perks) > 1 else 0
+            # --- Extracción de Runas SEGURA ---
+            try:
+                perks = me.get('perks', {}).get('styles', [])
+                primary_rune = perks[0]['selections'][0]['perk'] if perks and 'selections' in perks[0] and perks[0]['selections'] else 0
+                secondary_tree = perks[1]['style'] if len(perks) > 1 else 0
+            except Exception:
+                primary_rune, secondary_tree = 0, 0
             
             p_res = {
                 "win": me['win'], "champ": me['championName'], "lvl": me['champLevel'],
@@ -158,7 +160,7 @@ def get_scouter(puuid, modo):
                 "items": [me.get(f'item{i}', 0) for i in range(7)],
                 "role": me.get('individualPosition', 'ARAM'),
                 "summoners": [SUMMONERS.get(me.get('summoner1Id'), "SummonerFlash"), SUMMONERS.get(me.get('summoner2Id'), "SummonerFlash")],
-                "runes": [primary_rune, secondary_tree], # <-- Añadimos los IDs de las runas aquí
+                "runes": [primary_rune, secondary_tree],
                 "duracion": f"{info['gameDuration'] // 60}:{info['gameDuration'] % 60:02d}",
                 "fecha": dt_utc.astimezone(arg_tz).strftime('%d/%m %H:%M'),
                 "queue_name": q_name,

@@ -3,10 +3,9 @@ const API_URL = "https://quesitos-backend.onrender.com";
 let datosGlobales = [];
 let modoActual = 'soloq';
 let miGrafica = null;
-let LOL_VER = "16.8.1"; // Versión base, pero ahora se actualiza sola
-let runesData = [];
+let LOL_VER = "16.8.1"; 
+let runesData = []; // Variable global para guardar el mapa de runas
 
-// Títulos personalizados para los puestos de ARAM
 const ARAM_TITLES = [
     "ARAM GOD", "ARAM KING", "ARAM PRINCE", "ARAM DUKE", 
     "ARAM KNIGHT", "ARAM SQUIRE", "ARAM PEASANT", "ARAM MINION"
@@ -21,7 +20,6 @@ function cambiarModo(modo) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(`btn-${modo}`).classList.add('active');
     
-    // Mostramos u ocultamos el cartel de ARAM
     if (modo === 'aram') {
         document.getElementById('aram-aviso').style.display = 'block';
     } else {
@@ -100,6 +98,20 @@ function actualizarGrafica() {
     miGrafica = new Chart(ctx, { type: 'line', data: { labels, datasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#9ca3af' } } } } });
 }
 
+// Helper para buscar la imagen exacta de la runa
+function getRuneIcon(id) {
+    if (!runesData || !runesData.length) return '';
+    for (let tree of runesData) {
+        if (tree.id === id) return `https://ddragon.leagueoflegends.com/cdn/img/${tree.icon}`;
+        for (let slot of tree.slots) {
+            for (let rune of slot.runes) {
+                if (rune.id === id) return `https://ddragon.leagueoflegends.com/cdn/img/${rune.icon}`;
+            }
+        }
+    }
+    return '';
+}
+
 function mostrarScouter(j) {
     document.getElementById('seccion-scouter').style.display = 'block';
     const lista = document.getElementById('lista-partidas');
@@ -131,16 +143,12 @@ function mostrarScouter(j) {
 
                 const fixSum = (s) => String(s).replace('Ignite', 'Dot');
 
-                const posIcon = pos !== 'none' && !isAram ? `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-positions/position-icon-${pos}.png` : '';
-
                 // Generar los íconos de las runas
                 const primaryRuneIcon = getRuneIcon(p.runes ? p.runes[0] : 0);
                 const secondaryRuneIcon = getRuneIcon(p.runes ? p.runes[1] : 0);
                 
                 const r1Html = primaryRuneIcon ? `<img class="m-rune primary" src="${primaryRuneIcon}">` : `<div class="m-rune primary placeholder"></div>`;
                 const r2Html = secondaryRuneIcon ? `<img class="m-rune secondary" src="${secondaryRuneIcon}">` : `<div class="m-rune secondary placeholder"></div>`;
-
-                const fixSum = (s) => String(s).replace('Ignite', 'Dot');
 
                 card.innerHTML = `
                     <div class="m-info">
@@ -185,39 +193,22 @@ function mostrarScouter(j) {
         });
 }
 
-// --- ARRANQUE OPTIMIZADO: BUSCA LA VERSIÓN MÁS NUEVA DE RIOT Y LUEGO CARGA ---
 document.getElementById('update-time').textContent = "SINCRONIZANDO PARCHE..."; 
 
 fetch("https://ddragon.leagueoflegends.com/api/versions.json")
     .then(res => res.json())
     .then(versions => {
         LOL_VER = versions[0]; 
-        // --- NUEVO: Descargar la data de runas dinámicamente ---
         return fetch(`https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/data/es_AR/runesReforged.json`);
     })
     .then(res => res.json())
     .then(data => {
-        runesData = data; // Guardamos en memoria
+        runesData = data; 
         iniciarLeaderboard();
     })
     .catch(() => {
-        // Si falla Riot, usamos la versión de respaldo y arrancamos igual
         iniciarLeaderboard();
     });
-
-// --- NUEVO: Helper para buscar la imagen exacta de la runa ---
-function getRuneIcon(id) {
-    if (!runesData || !runesData.length) return '';
-    for (let tree of runesData) {
-        if (tree.id === id) return `https://ddragon.leagueoflegends.com/cdn/img/${tree.icon}`;
-        for (let slot of tree.slots) {
-            for (let rune of slot.runes) {
-                if (rune.id === id) return `https://ddragon.leagueoflegends.com/cdn/img/${rune.icon}`;
-            }
-        }
-    }
-    return '';
-}
 
 function iniciarLeaderboard() {
     document.getElementById('update-time').textContent = "DESPERTANDO SERVIDOR..."; 
