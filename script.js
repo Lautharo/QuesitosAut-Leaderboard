@@ -35,8 +35,15 @@ function renderizarTabla() {
         tr.onclick = () => mostrarScouter(j);
         tr.innerHTML = `
             <td style="color:var(--amarillo-pro); font-weight:800">${i + 1}</td>
-            <td><b>${j.nombre}</b><br><small style="color:gray">${j.last_game || '---'}</small></td>
-            <td>${stats.wins + stats.losses}</td>
+            <td>
+                <span style="color:white; font-weight:bold; font-size:1.1rem;">${j.nombre}</span> 
+                <span style="color:gray; font-weight:normal; font-size:0.9rem;">#${j.tag}</span>
+                <br>
+                <small style="color:gray; font-size:0.7rem; text-transform:uppercase;">ÚLTIMA: ${j.last_game || '---'}</small>
+            </td>
+            <td style="color:gray;">
+                <b style="color:white;">${stats.wins + stats.losses}</b> <span style="font-size:0.8em">PJs</span>
+            </td>
             <td>
                 <div class="col-rango-completo">
                     <div class="contenedor-icono-fijo">${stats.tier !== "UNRANKED" ? `<img src="${icon}" class="rank-icon">` : ''}</div>

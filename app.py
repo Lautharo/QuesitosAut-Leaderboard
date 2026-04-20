@@ -36,7 +36,6 @@ def home():
 
 @app.route('/api/leaderboard')
 def get_leaderboard():
-    # Si pasaron menos de 5 minutos, devolvemos la caché guardada (Carga instantánea)
     if time.time() - cache_leaderboard["ultima_actualizacion"] < 300 and cache_leaderboard["datos"]:
         return jsonify(cache_leaderboard["datos"])
 
@@ -44,18 +43,27 @@ def get_leaderboard():
     for jugador in JUGADORES:
         name, tag = jugador['nombre'], jugador['tag']
         try:
-            # Solo pedimos PUUID y Liga (2 peticiones por jugador = 16 peticiones en total)
             url_acc = f"https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{name}/{tag}"
             res_acc = requests.get(url_acc, headers=headers)
             if res_acc.status_code != 200: continue
             puuid = res_acc.json()['puuid']
+
+            # Obtenemos la fecha de la última partida (solo 1 para no tardar)
+            m_ids = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count=1", headers=headers).json()
+            last_date = "---"
+            if m_ids:
+                m_info = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/{m_ids[0]}", headers=headers).json()
+                last_date = datetime.fromtimestamp(m_info['info']['gameEndTimestamp']/1000).strftime('%d/%m %H:%M')
 
             leagues = requests.get(f"https://la2.api.riotgames.com/lol/league/v4/entries/by-puuid/{puuid}", headers=headers).json()
             sq = next((q for q in leagues if q['queueType'] == 'RANKED_SOLO_5x5'), None)
             fl = next((q for q in leagues if q['queueType'] == 'RANKED_FLEX_SR'), None)
 
             d = {
-                "nombre": name, "puuid": puuid, # Guardamos el PUUID para usarlo al hacer clic
+                "nombre": name, 
+                "tag": tag,             # Enviamos el tag
+                "puuid": puuid, 
+                "last_game": last_date, # Enviamos la fecha real
                 "soloq": {"tier": "UNRANKED", "rank": "", "lp": 0, "wins": 0, "losses": 0, "wr": 0, "puntos_grafica": 0},
                 "flex": {"tier": "UNRANKED", "rank": "", "lp": 0, "wins": 0, "losses": 0, "wr": 0, "puntos_grafica": 0},
                 "aram": {"tier": "UNRANKED", "wins": 0, "losses": 0, "wr": 0, "puntos_grafica": 0}
