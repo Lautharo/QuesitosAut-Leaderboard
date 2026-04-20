@@ -1,3 +1,6 @@
+// --- ACÁ CONECTA CON TU SERVIDOR DE RENDER ---
+const API_URL = "https://quesitos-backend.onrender.com"; 
+
 let datosGlobales = [];
 let modoActual = 'soloq';
 let miGrafica = null;
@@ -8,7 +11,7 @@ const ARAM_TITLES = [
     "ARAM KNIGHT", "ARAM SQUIRE", "ARAM PEASANT", "ARAM MINION"
 ];
 
-// --- MAPA DE RUNAS (Traduce los IDs de tu Python a imágenes oficiales) ---
+// --- MAPA DE RUNAS ---
 const RUNES_MAP = {
     8005: 'Precision/PressTheAttack/PressTheAttack', 8008: 'Precision/LethalTempo/LethalTempoTemp',
     8021: 'Precision/FleetFootwork/FleetFootwork', 8010: 'Precision/Conqueror/Conqueror',
@@ -118,91 +121,109 @@ function mostrarScouter(j) {
     const lista = document.getElementById('lista-partidas');
     const isAram = modoActual === 'aram';
     
-    document.getElementById('scouter-nombre').textContent = `SCOUTER: ${j.nombre}`;
-    lista.innerHTML = ''; 
+    document.getElementById('scouter-nombre').textContent = `SCOUTER: ${j.nombre} (Buscando...)`;
+    lista.innerHTML = '<div style="color:var(--amarillo-pro); text-align:center; padding: 20px;">Analizando historial en tiempo real...</div>';
 
-    // Al leer del datos.json local, extraemos las partidas al instante
-    const partidas = j.partidas[modoActual] || [];
-
-    if (partidas.length === 0) {
-        lista.innerHTML = '<div style="color:var(--color-subtexto); text-align:center; padding: 20px;">No hay partidas recientes en esta cola.</div>';
-        return;
-    }
-
-    partidas.forEach(p => {
-        const card = document.createElement('div');
-        card.className = `match-card ${p.win ? 'win' : 'loss'}`;
-        
-        const renderTeam = (team) => team.map(pl => `
-            <div class="player-row ${pl.name === j.nombre ? 'me' : ''}">
-                <img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${pl.champ}.png" onerror="this.src='https://ui-avatars.com/api/?name=${pl.champ}&background=1c1f26&color=d4b55c&size=32&font-size=0.6'">
-                <b>${pl.name}</b>
-            </div>`).join('');
-
-        const renderItems = p.items.map(id => {
-            if (id > 0) {
-                return `<div class="m-item-box"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/item/${id}.png" onerror="this.src='https://ddragon.leagueoflegends.com/cdn/13.24.1/img/item/${id}.png'"></div>`;
+    // MAGIA RESTAURADA: Le pide las partidas a tu backend de Render
+    fetch(`${API_URL}/api/scouter/${j.puuid}/${modoActual}`)
+        .then(res => {
+            if (!res.ok) throw new Error(`El servidor devolvió error ${res.status}`);
+            return res.json();
+        })
+        .then(partidas => {
+            if (!Array.isArray(partidas)) {
+                console.error("Error del backend:", partidas);
+                lista.innerHTML = `<div style="color:#f25757; text-align:center; padding: 20px;">Error obteniendo partidas: ${partidas.error || 'Datos no disponibles.'}</div>`;
+                document.getElementById('scouter-nombre').textContent = `SCOUTER: ${j.nombre}`;
+                return;
             }
-            return `<div class="m-item-box"></div>`;
-        }).join('');
 
-        // 1. TRADUCTOR DE POSICIÓN (SVG Vectoriales inquebrantables de Riot)
-        const rawRole = p.role ? p.role.toLowerCase() : 'none';
-        // Tu JSON manda: "middle", "bottom", "utility", "jungle", "top". Mapeamos al archivo SVG exacto:
-        const roleMapping = { 'middle': 'middle', 'jungle': 'jungle', 'bottom': 'bottom', 'utility': 'utility', 'top': 'top' };
-        const pos = roleMapping[rawRole] || 'none';
-        
-        // Solo carga el icono si la posición existe y NO es ARAM
-        const posIcon = (pos !== 'none' && !isAram) ? `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/svg/position-${pos}.svg` : '';
+            document.getElementById('scouter-nombre').textContent = `SCOUTER: ${j.nombre}`;
+            lista.innerHTML = ''; 
 
-        // 2. RUNAS Y HECHIZOS
-        const fixSum = (s) => String(s).replace('Ignite', 'Dot');
-        const sum1 = p.summoners && p.summoners[0] ? fixSum(p.summoners[0]) : 'SummonerFlash';
-        const sum2 = p.summoners && p.summoners[1] ? fixSum(p.summoners[1]) : 'SummonerDot';
+            if (partidas.length === 0) {
+                lista.innerHTML = '<div style="color:var(--color-subtexto); text-align:center; padding: 20px;">No hay partidas recientes en esta cola.</div>';
+                return;
+            }
 
-        const rune1 = p.runas && p.runas.length > 0 ? getRuneIcon(p.runas[0]) : '';
-        const rune2 = p.runas && p.runas.length > 1 ? getRuneIcon(p.runas[1]) : '';
+            partidas.forEach(p => {
+                const card = document.createElement('div');
+                card.className = `match-card ${p.win ? 'win' : 'loss'}`;
+                
+                const renderTeam = (team) => team.map(pl => `
+                    <div class="player-row ${pl.name === j.nombre ? 'me' : ''}">
+                        <img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${pl.champ}.png" onerror="this.src='https://ui-avatars.com/api/?name=${pl.champ}&background=1c1f26&color=d4b55c&size=32&font-size=0.6'">
+                        <b>${pl.name}</b>
+                    </div>`).join('');
 
-        const queueName = isAram ? 'ARAM' : (modoActual === 'soloq' ? 'Solo / Dúo' : 'Flex');
+                const renderItems = p.items.map(id => {
+                    if (id > 0) {
+                        return `<div class="m-item-box"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/item/${id}.png" onerror="this.src='https://ddragon.leagueoflegends.com/cdn/13.24.1/img/item/${id}.png'"></div>`;
+                    }
+                    return `<div class="m-item-box"></div>`;
+                }).join('');
 
-        card.innerHTML = `
-            <div class="m-info">
-                <b style="color:${p.win ? '#2add9c' : '#f25757'}">${p.win ? 'Victoria' : 'Derrota'}</b>
-                <span style="color: var(--amarillo-pro); font-weight: bold; font-size: 0.75rem;">${queueName}</span><br>
-                ${p.fecha} • ${p.duracion}
-                ${!isAram ? `<br><span class="${p.win ? 'lp-gain' : 'lp-loss'}">${p.win ? '+' : '-'}${p.lp_change || 20} LP</span>` : ''}
-            </div>
-            <div class="m-champ-block">
-                <div class="m-champ-img-container">
-                    <img class="main-champ" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${p.champ}.png" onerror="this.src='https://ui-avatars.com/api/?name=${p.champ}&background=1c1f26&color=d4b55c&size=64&font-size=0.6'">
-                    <span class="m-lvl">${p.lvl}</span>
-                    ${posIcon ? `<img src="${posIcon}" class="role-icon" style="background: rgba(28, 31, 38, 0.9); padding: 3px; border: 1px solid #2d3748; border-radius: 50%;">` : ''}
-                </div>
-                <div class="m-spells-runes">
-                    <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${sum1}.png">
-                    <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${sum2}.png">
-                </div>
-                <div class="m-spells-runes" style="margin-left: 4px;">
-                     ${rune1 ? `<img class="m-rune" src="${rune1}">` : '<div class="m-rune" style="border:1px solid #333;"></div>'}
-                     ${rune2 ? `<img class="m-rune" src="${rune2}" style="width:16px; height:16px; margin: 0 auto; background:none;">` : '<div class="m-rune" style="width:16px; height:16px; border:1px solid #333; margin:0 auto;"></div>'}
-                </div>
-            </div>
-            <div class="m-stats">
-                <div class="m-kda">${p.k} / <span style="color:#f25757">${p.d}</span> / ${p.a}</div>
-                <div class="m-cs">${p.cs} CS</div>
-            </div>
-            <div class="m-items">${renderItems}</div>
-            <div class="m-teams">
-                <div class="team-col">${renderTeam(p.team1)}</div>
-                <div class="team-col">${renderTeam(p.team2)}</div>
-            </div>
-        `;
-        lista.appendChild(card);
-    });
-    document.getElementById('seccion-scouter').scrollIntoView({ behavior: 'smooth' });
+                // --- MAPEO DE ROLES OPGG ---
+                const rawRole = p.role ? p.role.toLowerCase() : 'none';
+                const roleMapping = { 'middle': 'mid', 'jungle': 'jungle', 'bottom': 'adc', 'utility': 'support', 'top': 'top' };
+                const pos = roleMapping[rawRole] || 'none';
+                
+                // Solo muestra el icono si tiene posición válida y NO es ARAM
+                const posIcon = (pos !== 'none' && !isAram) ? `https://opgg-static.akamaized.net/meta/images/lol/role/${pos}.svg` : '';
+
+                // --- HECHIZOS Y RUNAS ---
+                const fixSum = (s) => String(s).replace('Ignite', 'Dot');
+                const sum1 = p.summoners && p.summoners[0] ? fixSum(p.summoners[0]) : 'SummonerFlash';
+                const sum2 = p.summoners && p.summoners[1] ? fixSum(p.summoners[1]) : 'SummonerDot';
+
+                const rune1 = p.runas && p.runas.length > 0 ? getRuneIcon(p.runas[0]) : '';
+                const rune2 = p.runas && p.runas.length > 1 ? getRuneIcon(p.runas[1]) : '';
+
+                const queueName = isAram ? 'ARAM' : (modoActual === 'soloq' ? 'Solo / Dúo' : 'Flex');
+
+                card.innerHTML = `
+                    <div class="m-info">
+                        <b style="color:${p.win ? '#2add9c' : '#f25757'}">${p.win ? 'Victoria' : 'Derrota'}</b>
+                        <span style="color: var(--amarillo-pro); font-weight: bold; font-size: 0.75rem;">${p.queue_name || queueName}</span><br>
+                        ${p.fecha} • ${p.duracion}
+                        ${!isAram ? `<br><span class="${p.win ? 'lp-gain' : 'lp-loss'}">${p.win ? '+' : '-'}${p.lp_change || 20} LP</span>` : ''}
+                    </div>
+                    <div class="m-champ-block">
+                        <div class="m-champ-img-container">
+                            <img class="main-champ" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${p.champ}.png" onerror="this.src='https://ui-avatars.com/api/?name=${p.champ}&background=1c1f26&color=d4b55c&size=64&font-size=0.6'">
+                            <span class="m-lvl">${p.lvl}</span>
+                            ${posIcon ? `<img src="${posIcon}" class="role-icon" style="background: rgba(28, 31, 38, 0.9); padding: 3px; border: 1px solid #2d3748; border-radius: 50%;">` : ''}
+                        </div>
+                        <div class="m-spells-runes">
+                            <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${sum1}.png">
+                            <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${sum2}.png">
+                        </div>
+                        <div class="m-spells-runes" style="margin-left: 4px;">
+                             ${rune1 ? `<img class="m-rune" src="${rune1}">` : '<div class="m-rune" style="border:1px solid #333;"></div>'}
+                             ${rune2 ? `<img class="m-rune" src="${rune2}" style="width:16px; height:16px; margin: 0 auto; background:none;">` : '<div class="m-rune" style="width:16px; height:16px; border:1px solid #333; margin:0 auto;"></div>'}
+                        </div>
+                    </div>
+                    <div class="m-stats">
+                        <div class="m-kda">${p.k} / <span style="color:#f25757">${p.d}</span> / ${p.a}</div>
+                        <div class="m-cs">${p.cs} CS</div>
+                    </div>
+                    <div class="m-items">${renderItems}</div>
+                    <div class="m-teams">
+                        <div class="team-col">${renderTeam(p.team1)}</div>
+                        <div class="team-col">${renderTeam(p.team2)}</div>
+                    </div>
+                `;
+                lista.appendChild(card);
+            });
+            document.getElementById('seccion-scouter').scrollIntoView({ behavior: 'smooth' });
+        })
+        .catch(err => {
+            console.error(err);
+            lista.innerHTML = '<div style="color:#f25757; text-align:center; padding: 20px;">Fallo al contactar el servidor. Revisá que esté prendido en Render.</div>';
+        });
 }
 
-// --- ARRANQUE OPTIMIZADO: BUSCA LA VERSIÓN MÁS NUEVA DE RIOT Y LUEGO LEE DATOS.JSON ---
+// --- ARRANQUE OPTIMIZADO: BUSCA LA VERSIÓN MÁS NUEVA DE RIOT Y LUEGO LEE DE RENDER ---
 document.getElementById('update-time').textContent = "SINCRONIZANDO PARCHE..."; 
 
 fetch("https://ddragon.leagueoflegends.com/api/versions.json")
@@ -218,8 +239,8 @@ fetch("https://ddragon.leagueoflegends.com/api/versions.json")
 function iniciarLeaderboard() {
     document.getElementById('update-time').textContent = "CARGANDO DATOS..."; 
     
-    // Leemos directo del archivo generado por tu main.py en GitHub
-    fetch('datos.json')
+    // Le pega a tu API de Render, olvidate del JSON
+    fetch(`${API_URL}/api/leaderboard`)
         .then(res => res.json())
         .then(d => { 
             datosGlobales = d; 
@@ -228,6 +249,6 @@ function iniciarLeaderboard() {
             cambiarModo('soloq'); 
         })
         .catch(() => {
-            document.getElementById('update-time').textContent = "SIN DATOS - ESPERA AL BOT";
+            document.getElementById('update-time').textContent = "SIN DATOS - ESPERA AL SERVIDOR";
         });
 }
