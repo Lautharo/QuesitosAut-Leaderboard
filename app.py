@@ -124,6 +124,7 @@ def procesar_jugador(jugador, arg_tz):
 
         d = {
             "nombre": name, "tag": tag, "puuid": puuid, "last_game": last_date,
+            "profileIconId": profile_icon_id,
             "is_main": jugador.get('is_main', True),
             "propietario": jugador.get('propietario'),
             "soloq": {"tier": "UNRANKED", "rank": "", "lp": 0, "wins": 0, "losses": 0, "wr": 0, "puntos_grafica": 0},
