@@ -202,7 +202,7 @@ function actualizarGrafica() {
     const ctx = document.getElementById('graficoElo').getContext('2d');
     if (miGrafica) miGrafica.destroy();
     
-    // --- 1. EL FIX: AUTO-PARCHEAR A LAS CUENTAS NUEVAS O SMURFS ---
+    // 1. Auto-parchear a los jugadores nuevos o smurfs
     const hoy = new Date().toLocaleDateString('es-AR', {day: '2-digit', month: '2-digit'});
     datosGlobales.forEach(j => {
         if (j.historiales && j.historiales[modoActual] && j.historiales[modoActual].length === 0 && j[modoActual].tier !== "UNRANKED") {
@@ -213,7 +213,7 @@ function actualizarGrafica() {
         }
     });
 
-    // --- 2. APLICAR FILTROS ---
+    // 2. Aplicar Filtros de Smurfs y Dueños
     const mostrarSmurfs = document.getElementById('filtro-smurf') ? document.getElementById('filtro-smurf').checked : true;
     const filtroJugador = document.getElementById('filtro-jugador') ? document.getElementById('filtro-jugador').value : 'TODOS';
 
@@ -226,21 +226,21 @@ function actualizarGrafica() {
     const jugadoresConHistorial = jugadoresA_Mostrar.filter(j => j.historiales && j.historiales[modoActual] && j.historiales[modoActual].length > 0);
     if (jugadoresConHistorial.length === 0) return;
 
-    // --- 3. ALINEACIÓN PERFECTA DE FECHAS EN EL EJE X ---
-    const todasLasFechas = new Set();
-    jugadoresConHistorial.forEach(j => {
-        j.historiales[modoActual].forEach(h => todasLasFechas.add(h.fecha));
-    });
-    const labels = Array.from(todasLasFechas);
+    // --- 3. EL FIX: ALINEACIÓN SECUENCIAL (A LA DERECHA) ---
+    // Buscamos al jugador que más partidas jugó para saber cuántos puntos (ticks) va a tener el eje X
+    const jugadorMasLargo = jugadoresConHistorial.reduce((max, j) => 
+        j.historiales[modoActual].length > max.historiales[modoActual].length ? j : max
+    );
+    const labels = jugadorMasLargo.historiales[modoActual].map(h => h.fecha);
+    const maxLength = labels.length;
 
     const datasets = jugadoresConHistorial.map(j => {
         const colorJugador = obtenerColor(j.nombre);
-        
-        // Mapea los puntos exactamente al día que corresponden
-        let dataAlineada = labels.map(fecha => {
-            const registro = j.historiales[modoActual].find(h => h.fecha === fecha);
-            return registro ? registro.puntos : null;
-        });
+        const data = j.historiales[modoActual].map(h => h.puntos);
+
+        // Alineamos a la derecha: rellenamos con null al principio para que el último punto de todos coincida
+        const padding = new Array(maxLength - data.length).fill(null);
+        const dataAlineada = padding.concat(data);
 
         return {
             label: j.nombre,
@@ -251,7 +251,7 @@ function actualizarGrafica() {
             pointRadius: 3,       
             pointHoverRadius: 6,  
             tension: 0.1,
-            spanGaps: true // Conecta las líneas si un jugador no jugó un día
+            spanGaps: true // Fundamental: Conecta la línea aunque haya nulls en el medio
         };
     });
 
