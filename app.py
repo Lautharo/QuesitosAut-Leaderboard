@@ -44,6 +44,10 @@ SUMMONERS = {
 
 cache_leaderboard = {"datos": [], "ultima_actualizacion": 0}
 
+def log_error(mensaje):
+    """Fuerza a Render a mostrar el error en consola al instante"""
+    print(f"[ERROR CRÍTICO] {mensaje}", file=sys.stderr, flush=True)
+
 def sync_lp_change(puuid, queue_type, current_lp, last_match_id):
     """Calcula la diferencia de PL y la guarda en Supabase"""
     if not supabase: return 0
@@ -61,17 +65,6 @@ def sync_lp_change(puuid, queue_type, current_lp, last_match_id):
             return diff
     except Exception as e:
         print(f"Error sync LP: {e}")
-    return 0
-
-def log_error(mensaje):
-    """Fuerza a Render a mostrar el error en consola al instante"""
-    print(f"[ERROR CRÍTICO] {mensaje}", file=sys.stderr, flush=True)
-
-def sync_lp_change(puuid, queue_type, current_lp, last_match_id):
-    if not supabase: return 0
-    try:
-        # ... [Tu lógica original de sync_lp_change] ...
-    except Exception as e:
         log_error(f"Supabase falló al sincronizar PL de {puuid}: {e}")
     return 0
 
