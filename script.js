@@ -353,8 +353,9 @@ function mostrarScouter(j) {
     
     document.getElementById('scouter-nombre').textContent = `SCOUTER: ${j.nombre} (Buscando...)`;
     lista.innerHTML = '<div style="color:var(--amarillo-pro); text-align:center; padding: 20px;">Analizando historial en tiempo real...</div>';
-    panelStats.innerHTML = ''; 
-    panelStats.style.display = 'none';
+    
+    // NUEVO: En vez de ocultar el panel, le ponemos un texto de carga
+    panelStats.innerHTML = '<div style="color:var(--amarillo-pro); text-align:center; width: 100%;">Cargando datos del jugador...</div>'; 
 
     fetch(`${API_URL}/api/scouter/${j.puuid}/${modoActual}`)
         .then(res => res.json())

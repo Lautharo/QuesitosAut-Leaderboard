@@ -106,12 +106,17 @@
             </div>
             <div class="columna-derecha" style="flex: 1; min-width: 400px; display: flex; flex-direction: column; gap: 20px;">
 
-                <div class="contenedor-grafico" style="position: relative; height: 350px; background: var(--bg-tarjeta); border-radius: 12px; padding: 20px; border: 1px solid #2d3748;">
+                <div class="contenedor-grafico" style="position: relative; height: 280px; background: var(--bg-tarjeta); border-radius: 12px; padding: 20px; border: 1px solid #2d3748;">
                     <button onclick="resetearZoom()" class="btn-reset-zoom">Reset Zoom</button>
                     <canvas id="graficoElo"></canvas>
                 </div>
 
-                <div id="panel-estadisticas" style="display: none; background: var(--bg-tarjeta); border: 1px solid #2d3748; border-radius: 12px; padding: 20px;">
+                <div id="panel-estadisticas" style="flex: 1; background: var(--bg-tarjeta); border: 1px solid #2d3748; border-radius: 12px; padding: 20px; display: flex; align-items: center; justify-content: center;">
+                    <div style="color: var(--color-subtexto); text-align: center;">
+                        <span style="font-size: 2rem;">👆</span><br>
+                        <b style="font-size: 1.1rem; color: white;">Seleccioná a un Quesito</b><br>
+                        para ver su Desempeño y Maestrías
+                    </div>
                 </div>
 
             </div>
