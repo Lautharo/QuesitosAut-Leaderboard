@@ -3,7 +3,7 @@ const API_URL = "https://quesitos-backend.onrender.com";
 let datosGlobales = [];
 let modoActual = 'soloq';
 let miGrafica = null;
-const LOL_VER = "14.8.1"; 
+let LOL_VER = "16.8.1"; // Versión base, pero ahora se actualiza sola
 
 // Títulos personalizados para los puestos de ARAM
 const ARAM_TITLES = [
@@ -19,6 +19,14 @@ function cambiarModo(modo) {
     modoActual = modo;
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(`btn-${modo}`).classList.add('active');
+    
+    // Mostramos u ocultamos el cartel de ARAM
+    if (modo === 'aram') {
+        document.getElementById('aram-aviso').style.display = 'block';
+    } else {
+        document.getElementById('aram-aviso').style.display = 'none';
+    }
+
     renderizarTabla();
     actualizarGrafica();
 }
@@ -39,7 +47,6 @@ function renderizarTabla() {
         const partidasTotales = isAram ? stats.total_partidas : (stats.wins + stats.losses);
         const textoPJs = isAram ? `<b style="color:white;">${partidasTotales}</b> <span style="font-size:0.8em">PJs (Season)</span>` : `<b style="color:white;">${partidasTotales}</b> <span style="font-size:0.8em">PJs</span>`;
         
-        // Asignamos el título de ARAM según su posición 'i' en la tabla
         const rangoTexto = isAram ? (ARAM_TITLES[i] || "ARAM NOOB") : `${stats.tier} ${stats.rank}`;
 
         const rangoHTML = isAram ? 
@@ -109,8 +116,8 @@ function mostrarScouter(j) {
             partidas.forEach(p => {
                 const card = document.createElement('div');
                 card.className = `match-card ${p.win ? 'win' : 'loss'}`;
-                const team1 = p.team1.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${pl.champ}.png"><b>${pl.name}</b></div>`).join('');
-                const team2 = p.team2.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${pl.champ}.png"><b>${pl.name}</b></div>`).join('');
+                const team1 = p.team1.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${pl.champ}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'"><b>${pl.name}</b></div>`).join('');
+                const team2 = p.team2.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${pl.champ}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'"><b>${pl.name}</b></div>`).join('');
 
                 const renderItems = p.items.map(id => {
                     const url = id > 0 ? `https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/item/${id}.png` : '';
@@ -121,25 +128,24 @@ function mostrarScouter(j) {
                 const pos = p.role ? roleMapping[p.role.toLowerCase()] || 'none' : 'none';
                 const posIcon = pos !== 'none' && !isAram ? `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-positions/position-icon-${pos}.png` : '';
 
-                // Ocultamos los PL si es ARAM (cero suposiciones)
-                const lpHTML = !isAram ? `<br><span class="${p.win ? 'lp-gain' : 'lp-loss'}">${p.win ? '+' : '-'}${p.lp_change} LP</span>` : '';
+                const fixSum = (s) => String(s).replace('Ignite', 'Dot');
 
                 card.innerHTML = `
                     <div class="m-info">
                         <b style="color:${p.win ? '#2add9c' : '#f25757'}">${p.win ? 'Victoria' : 'Derrota'}</b>
                         <span style="color: var(--amarillo-pro); font-weight: bold; font-size: 0.75rem;">${p.queue_name}</span><br>
                         ${p.fecha} • ${p.duracion}
-                        ${lpHTML}
+                        ${!isAram ? `<br><span class="${p.win ? 'lp-gain' : 'lp-loss'}">${p.win ? '+' : '-'}${p.lp_change || 20} LP</span>` : ''}
                     </div>
                     <div class="m-champ-block">
                         <div class="m-champ-img-container">
-                            <img class="main-champ" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${p.champ}.png">
+                            <img class="main-champ" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${p.champ}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'">
                             <span class="m-lvl">${p.lvl}</span>
                             ${posIcon ? `<img src="${posIcon}" class="role-icon">` : ''}
                         </div>
                         <div class="m-spells-runes">
-                            <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${p.summoners[0]}.png">
-                            <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${p.summoners[1]}.png">
+                            <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${p.summoners ? fixSum(p.summoners[0]) : 'SummonerFlash'}.png">
+                            <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${p.summoners ? fixSum(p.summoners[1]) : 'SummonerDot'}.png">
                         </div>
                     </div>
                     <div class="m-stats">
@@ -161,16 +167,32 @@ function mostrarScouter(j) {
         });
 }
 
-document.getElementById('update-time').textContent = "DESPERTANDO SERVIDOR..."; 
+// --- ARRANQUE OPTIMIZADO: BUSCA LA VERSIÓN MÁS NUEVA DE RIOT Y LUEGO CARGA ---
+document.getElementById('update-time').textContent = "SINCRONIZANDO PARCHE..."; 
 
-fetch(`${API_URL}/api/leaderboard`)
+fetch("https://ddragon.leagueoflegends.com/api/versions.json")
     .then(res => res.json())
-    .then(d => { 
-        datosGlobales = d; 
-        document.getElementById('update-time').textContent = "LEADERBOARD ONLINE"; 
-        cerrarAviso(); 
-        cambiarModo('soloq'); 
+    .then(versions => {
+        LOL_VER = versions[0]; // Esto siempre agarra el último parche oficial disponible
+        iniciarLeaderboard();
     })
     .catch(() => {
-        document.getElementById('update-time').textContent = "SIN DATOS - ESPERA A RENDER";
+        // Si falla Riot, usamos la versión de respaldo y arrancamos igual
+        iniciarLeaderboard();
     });
+
+function iniciarLeaderboard() {
+    document.getElementById('update-time').textContent = "DESPERTANDO SERVIDOR..."; 
+    
+    fetch(`${API_URL}/api/leaderboard`)
+        .then(res => res.json())
+        .then(d => { 
+            datosGlobales = d; 
+            document.getElementById('update-time').textContent = "LEADERBOARD ONLINE"; 
+            cerrarAviso(); 
+            cambiarModo('soloq'); 
+        })
+        .catch(() => {
+            document.getElementById('update-time').textContent = "SIN DATOS - ESPERA A RENDER";
+        });
+}
