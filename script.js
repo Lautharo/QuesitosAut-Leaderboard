@@ -147,13 +147,24 @@ function renderizarTabla() {
             mostrarScouter(j);
         };
 
+        // Sacamos el ID del icono (si el backend lo manda como profileIconId, sino usamos el 29 por defecto)
+        const iconId = j.profileIconId || 29; 
+        const profileIconUrl = `https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/profileicon/${iconId}.png`;
+
         tr.innerHTML = `
             <td style="color:var(--amarillo-pro); font-weight:800">${i + 1}</td>
             <td>
-                <span style="color:white; font-weight:bold; font-size:1.1rem;">${j.nombre}</span> 
-                <span style="color:gray; font-weight:normal; font-size:0.9rem;">#${j.tag}</span><br>
-                ${!j.is_main ? `<small style="color: var(--color-gold); font-size: 0.75rem; font-weight: bold; background: rgba(212, 181, 92, 0.1); padding: 2px 6px; border-radius: 4px; display: inline-block; margin: 2px 0;">Smurf de ${j.propietario}</small><br>` : ''}
-                <small style="color:gray; font-size:0.7rem; text-transform:uppercase;">ÚLTIMA: ${j.last_game || '---'}</small>
+                <div class="jugador-perfil-container">
+                    <img src="${profileIconUrl}" class="perfil-icono" alt="Icono de ${j.nombre}">
+                    <div class="jugador-info-text">
+                        <div>
+                            <span style="color:white; font-weight:bold; font-size:1.1rem;">${j.nombre}</span> 
+                            <span style="color:gray; font-weight:normal; font-size:0.9rem;">#${j.tag}</span>
+                        </div>
+                        ${!j.is_main ? `<small style="color: var(--color-gold); font-size: 0.75rem; font-weight: bold; background: rgba(212, 181, 92, 0.1); padding: 2px 6px; border-radius: 4px; display: inline-block; margin: 2px 0; width: fit-content;">Smurf de ${j.propietario}</small>` : ''}
+                        <small style="color:gray; font-size:0.7rem; text-transform:uppercase;">ÚLTIMA: ${j.last_game || '---'}</small>
+                    </div>
+                </div>
             </td>
             <td style="color:gray;"><b>${isAram ? stats.total_partidas : (stats.wins + stats.losses)}</b> <span style="font-size:0.8em">PJs</span></td>
             <td>

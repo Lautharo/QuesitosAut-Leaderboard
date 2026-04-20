@@ -655,3 +655,26 @@ h1 {
 	background-color: rgba(42, 221, 156, 0.15) !important;
 	box-shadow: inset 4px 0 0 var(--color-emerald);
 }
+/* --- CONTENEDOR DE PERFIL EN LA TABLA --- */
+.jugador-perfil-container {
+    display: flex;
+    align-items: center; /* Centra la foto y el texto verticalmente */
+    gap: 15px; /* Define el espacio entre la foto y el nombre */
+}
+
+/* --- ESTILO DE LA FOTO DE PERFIL --- */
+.perfil-icono {
+    width: 48px; /* Tamaño del icono */
+    height: 48px; /* Tamaño del icono */
+    border-radius: 50%; /* Lo hace un círculo perfecto */
+    border: 2px solid #2d3748; /* Borde sutil para que resalte */
+    object-fit: cover; /* Evita que la imagen se deforme */
+    box-shadow: 0 0 8px rgba(0, 0, 0, 0.5); /* Sombra para darle profundidad */
+}
+
+/* --- CONTENEDOR DEL TEXTO (Nombre, Tag, Smurf, Fecha) --- */
+.jugador-info-text {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
