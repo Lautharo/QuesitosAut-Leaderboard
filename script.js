@@ -82,11 +82,61 @@ function renderizarTabla() {
     });
 }
 
+// --- PLUGIN PERSONALIZADO PARA PINTAR LOS FONDOS DE LAS LIGAS ---
+const fondoLigasPlugin = {
+    id: 'fondoLigas',
+    beforeDraw: (chart) => {
+        const { ctx, chartArea: { top, bottom, left, right }, scales: { y } } = chart;
+        
+        // Definimos los rangos de ELO y sus colores (traslúcidos)
+        const ligas = [
+            { nombre: "C", min: 9000, color: "rgba(255, 215, 0, 0.05)" },    // Challenger
+            { nombre: "GM", min: 8000, color: "rgba(255, 0, 0, 0.05)" },      // Grandmaster
+            { nombre: "M", min: 7000, color: "rgba(128, 0, 128, 0.05)" },     // Master
+            { nombre: "D", min: 6000, color: "rgba(87, 101, 242, 0.05)" },    // Diamond
+            { nombre: "E", min: 5000, color: "rgba(42, 221, 156, 0.05)" },    // Emerald
+            { nombre: "P", min: 4000, color: "rgba(75, 202, 235, 0.05)" },    // Platinum
+            { nombre: "G", min: 3000, color: "rgba(242, 175, 66, 0.05)" },    // Gold
+            { nombre: "S", min: 2000, color: "rgba(160, 160, 160, 0.05)" },   // Silver
+            { nombre: "B", min: 1000, color: "rgba(205, 127, 50, 0.05)" },    // Bronze
+            { nombre: "I", min: 0, color: "rgba(81, 72, 60, 0.05)" }          // Iron
+        ];
+
+        ctx.save();
+        ligas.forEach((liga, i) => {
+            // Calculamos dónde cae cada límite en el eje Y actual
+            const yTop = y.getPixelForValue(ligas[i-1] ? ligas[i-1].min : 10000); 
+            const yBottom = y.getPixelForValue(liga.min);
+
+            // Si el rango es visible en el gráfico actual, lo pintamos
+            if (yTop < bottom && yBottom > top) {
+                // Pintar el fondo
+                ctx.fillStyle = liga.color;
+                ctx.fillRect(left, Math.max(top, yTop), right - left, Math.min(bottom, yBottom) - Math.max(top, yTop));
+                
+                // Pintar la línea separadora
+                ctx.beginPath();
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.1)"; // Línea blanca suave
+                ctx.setLineDash([5, 5]); // Línea punteada
+                ctx.moveTo(left, yBottom);
+                ctx.lineTo(right, yBottom);
+                ctx.stroke();
+
+                // Escribir el texto de la liga a la izquierda
+                ctx.fillStyle = liga.color.replace('0.05', '0.5'); // Texto un poco más visible
+                ctx.font = "bold 12px Arial";
+                ctx.fillText(liga.nombre, left + 5, yBottom - 5);
+            }
+        });
+        ctx.restore();
+    }
+};
+
 function actualizarGrafica() {
     const ctx = document.getElementById('graficoElo').getContext('2d');
     if (miGrafica) miGrafica.destroy();
     
-    // Filtramos a los que sí tengan un historial válido para este modo
+    // Filtramos a los que sí tengan historial
     const jugadoresConHistorial = datosGlobales.filter(j => 
         j.historiales && j.historiales[modoActual] && j.historiales[modoActual].length > 0
     );
@@ -99,17 +149,57 @@ function actualizarGrafica() {
     );
     const labels = jugadorMasLargo.historiales[modoActual].map(h => h.fecha);
 
-    const datasets = jugadoresConHistorial.slice(0, 5).map(j => ({
+    // Acá sacamos el .slice(0, 5) para que dibuje a TODOS
+    const datasets = jugadoresConHistorial.map(j => ({
         label: j.nombre,
         data: j.historiales[modoActual].map(h => h.puntos),
         borderColor: getComputedStyle(document.documentElement).getPropertyValue(`--color-${j[modoActual].tier.toLowerCase()}`).trim() || '#d4b55c',
-        tension: 0.3
+        backgroundColor: getComputedStyle(document.documentElement).getPropertyValue(`--color-${j[modoActual].tier.toLowerCase()}`).trim() || '#d4b55c',
+        borderWidth: 3,
+        pointRadius: 4,
+        pointHoverRadius: 7,
+        tension: 0.1 // Líneas un poco más rectas como las de OP.GG
     }));
 
     miGrafica = new Chart(ctx, { 
         type: 'line', 
         data: { labels, datasets }, 
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#9ca3af' } } } } 
+        options: { 
+            responsive: true, 
+            maintainAspectRatio: false, 
+            interaction: {
+                mode: 'index',
+                intersect: false,
+            },
+            scales: {
+                y: {
+                    // Sugerimos un rango, pero el plugin de pan permite salirse
+                    suggestedMin: 1000, 
+                    suggestedMax: 6000,
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                },
+                x: {
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                }
+            },
+            plugins: { 
+                legend: { 
+                    labels: { color: '#9ca3af', usePointStyle: true, boxWidth: 8 } 
+                },
+                zoom: {
+                    pan: {
+                        enabled: true,
+                        mode: 'y', // Solo permitimos arrastrar arriba/abajo
+                        modifierKey: null, // Se arrastra con click normal
+                    },
+                    zoom: {
+                        wheel: { enabled: true }, // Permite hacer zoom con la ruedita del mouse
+                        mode: 'y',
+                    }
+                }
+            } 
+        },
+        plugins: [fondoLigasPlugin] // Activamos nuestro fondo personalizado
     });
 }
 
