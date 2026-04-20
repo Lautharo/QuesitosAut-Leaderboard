@@ -212,7 +212,7 @@ def get_scouter(puuid, modo):
             if modo != 'aram' and supabase:
                 try:
                     # Traemos también los league_points
-                    db_res = supabase.table("match_history").select("change_lp, league_points").eq("match_id", mid).execute()
+                    db_res = supabase.table("match_history").select("change_lp, league_points").eq("match_id", mid).eq("puuid", puuid).execute()
                     if db_res.data:
                         lp_real = db_res.data[0]['change_lp']
                         lp_current = db_res.data[0]['league_points'] # <-- LO GUARDAMOS
