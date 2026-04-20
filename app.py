@@ -3,6 +3,7 @@ from flask_cors import CORS
 import requests
 import os
 import time
+import pytz
 from datetime import datetime
 
 app = Flask(__name__)
@@ -40,6 +41,9 @@ def get_leaderboard():
         return jsonify(cache_leaderboard["datos"])
 
     datos_finales = []
+    # Definimos la zona horaria de Argentina
+    arg_tz = pytz.timezone('America/Argentina/Buenos_Aires')
+
     for jugador in JUGADORES:
         name, tag = jugador['nombre'], jugador['tag']
         try:
@@ -48,22 +52,26 @@ def get_leaderboard():
             if res_acc.status_code != 200: continue
             puuid = res_acc.json()['puuid']
 
-            # Obtenemos la fecha de la última partida (solo 1 para no tardar)
+            # Obtenemos la última partida
             m_ids = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count=1", headers=headers).json()
             last_date = "---"
             if m_ids:
                 m_info = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/{m_ids[0]}", headers=headers).json()
-                last_date = datetime.fromtimestamp(m_info['info']['gameEndTimestamp']/1000).strftime('%d/%m %H:%M')
+                
+                # --- LÓGICA DE HORA ARGENTINA ---
+                timestamp = m_info['info']['gameEndTimestamp'] / 1000
+                # Convertimos el tiempo a objeto datetime en UTC y luego a Argentina
+                dt_utc = datetime.fromtimestamp(timestamp, tz=pytz.utc)
+                dt_arg = dt_utc.astimezone(arg_tz)
+                last_date = dt_arg.strftime('%d/%m %H:%M')
+                # -------------------------------
 
             leagues = requests.get(f"https://la2.api.riotgames.com/lol/league/v4/entries/by-puuid/{puuid}", headers=headers).json()
             sq = next((q for q in leagues if q['queueType'] == 'RANKED_SOLO_5x5'), None)
             fl = next((q for q in leagues if q['queueType'] == 'RANKED_FLEX_SR'), None)
 
             d = {
-                "nombre": name, 
-                "tag": tag,             # Enviamos el tag
-                "puuid": puuid, 
-                "last_game": last_date, # Enviamos la fecha real
+                "nombre": name, "tag": tag, "puuid": puuid, "last_game": last_date,
                 "soloq": {"tier": "UNRANKED", "rank": "", "lp": 0, "wins": 0, "losses": 0, "wr": 0, "puntos_grafica": 0},
                 "flex": {"tier": "UNRANKED", "rank": "", "lp": 0, "wins": 0, "losses": 0, "wr": 0, "puntos_grafica": 0},
                 "aram": {"tier": "UNRANKED", "wins": 0, "losses": 0, "wr": 0, "puntos_grafica": 0}
