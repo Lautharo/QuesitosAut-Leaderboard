@@ -201,7 +201,6 @@ function actualizarGrafica() {
     );
     const labels = jugadorMasLargo.historiales[modoActual].map(h => h.fecha);
 
-    // 1. ACHICAR LOS CÍRCULOS
     const datasets = jugadoresConHistorial.map(j => {
         const colorJugador = COLORES_JUGADORES[j.nombre] || '#ffffff';
         return {
@@ -223,12 +222,8 @@ function actualizarGrafica() {
             responsive: true, 
             maintainAspectRatio: false, 
             
-            // Margen interno al canvas para que nada se corte arriba
             layout: {
-                padding: {
-                    top: 15,
-                    right: 20
-                }
+                padding: { top: 15, right: 20 }
             },
 
             interaction: {
@@ -236,14 +231,14 @@ function actualizarGrafica() {
                 intersect: true, 
             },
             
+            // --- ÚNICO BLOQUE SCALES ---
             scales: {
                 y: {
                     suggestedMin: 1000, 
                     suggestedMax: 6000,
                     grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                    // NUEVO: Apagamos por completo las letras/números de la izquierda
                     ticks: {
-                        display: false
+                        display: false // <- ACÁ MUEREN LAS LETRAS GRISES
                     }
                 },
                 x: {

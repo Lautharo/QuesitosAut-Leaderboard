@@ -29,7 +29,8 @@ JUGADORES = [
     {"nombre": "Murs", "tag": "Kaiju"},
     {"nombre": "XCriadoenLobosX", "tag": "Toxic"},
     {"nombre": "Quesito Azul", "tag": "IDK"},
-    {"nombre": "Quesito Gruyere", "tag": "Out"}
+    {"nombre": "Quesito Gruyere", "tag": "Out"},
+    {"nombre": "Matti5", "tag": "7777"}
 ]
 
 QUEUES = {"soloq": 420, "flex": 440, "aram": 450}
