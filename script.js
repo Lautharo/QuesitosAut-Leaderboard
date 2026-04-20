@@ -359,7 +359,19 @@ function mostrarScouter(j) {
                     } else {
                         const lpSign = p.lp_change > 0 ? '+' : '';
                         const lpClass = p.lp_change > 0 ? 'lp-gain' : 'lp-loss';
-                        lpHtml = `<br><span class="${lpClass}">${lpSign}${p.lp_change} LP</span>`;
+                        
+                        // Lógica para detectar el Ascenso/Descenso
+                        let estadoExtra = "";
+                        // Si gané PL, y mis PL actuales menos lo que gané da negativo, crucé de liga hacia arriba
+                        if (p.lp_change > 0 && (p.lp_current - p.lp_change < 0)) {
+                            estadoExtra = ' <span style="color:#d4b55c; font-size: 0.8em">(Ascenso)</span>';
+                        } 
+                        // Si perdí PL, y mis PL actuales menos lo que perdí da más de 100, caí de liga
+                        else if (p.lp_change < 0 && (p.lp_current - p.lp_change >= 100)) {
+                            estadoExtra = ' <span style="color:#9ca3af; font-size: 0.8em">(Descenso)</span>';
+                        }
+
+                        lpHtml = `<br><span class="${lpClass}">${lpSign}${p.lp_change} LP${estadoExtra}</span>`;
                     }
                 }
 
@@ -441,7 +453,7 @@ function iniciarCooldown(ultimaAct) {
         if (restante > 0) {
             btn.disabled = true;
             const mins = Math.floor(restante / 60);
-            const secs = restante % 60;
+            const secs = Math.floor(restante % 60); // <-- ACÁ ESTÁ EL FIX
             btn.textContent = `Actualizar en ${mins}:${secs.toString().padStart(2, '0')}`;
         } else {
             btn.disabled = false;

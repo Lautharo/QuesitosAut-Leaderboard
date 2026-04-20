@@ -55,10 +55,12 @@ def log_error(mensaje):
 def sync_lp_change(puuid, queue_type, current_lp, puntos_grafica, last_match_id):
     if not supabase: return 0
     try:
-        with db_lock: # <-- NUEVO: Hace que los hilos entren de a uno
-            res = supabase.table("match_history").select("league_points").eq("puuid", puuid).eq("queue_type", queue_type).order("created_at", desc=True).limit(1).execute()
-            last_lp = res.data[0]['league_points'] if res.data else current_lp
-            diff = current_lp - last_lp
+        with db_lock:
+            # Ahora traemos los puntos totales, no solo los PL de 0 a 100
+            res = supabase.table("match_history").select("puntos_grafica").eq("puuid", puuid).eq("queue_type", queue_type).order("created_at", desc=True).limit(1).execute()
+            last_pts = res.data[0]['puntos_grafica'] if res.data else puntos_grafica
+            
+            diff = puntos_grafica - last_pts # Ej: 2218 (Plata III 18) - 2197 (Plata IV 97) = 21
 
             if diff != 0 or not res.data:
                 supabase.table("match_history").upsert({
@@ -193,11 +195,14 @@ def get_scouter(puuid, modo):
 
             # Buscamos el PL real en Supabase (solo para clasificatorias)
             lp_real = 0
+            lp_current = 0 # <-- NUEVA VARIABLE
             if modo != 'aram' and supabase:
                 try:
-                    db_res = supabase.table("match_history").select("change_lp").eq("match_id", mid).execute()
+                    # Traemos también los league_points
+                    db_res = supabase.table("match_history").select("change_lp, league_points").eq("match_id", mid).execute()
                     if db_res.data:
                         lp_real = db_res.data[0]['change_lp']
+                        lp_current = db_res.data[0]['league_points'] # <-- LO GUARDAMOS
                 except Exception: pass
 
             try:
@@ -215,6 +220,7 @@ def get_scouter(puuid, modo):
                 "summoners": [SUMMONERS.get(me.get('summoner1Id'), "SummonerFlash"), SUMMONERS.get(me.get('summoner2Id'), "SummonerFlash")],
                 "runes": [primary_rune, secondary_tree],
                 "lp_change": lp_real,
+                "lp_current": lp_current, # <-- LO AGREGAMOS AL JSON
                 "duracion": f"{info['gameDuration'] // 60}:{info['gameDuration'] % 60:02d}",
                 "fecha": datetime.fromtimestamp(info['gameEndTimestamp']/1000, tz=pytz.utc).astimezone(arg_tz).strftime('%d/%m %H:%M'),
                 "queue_name": q_name,
