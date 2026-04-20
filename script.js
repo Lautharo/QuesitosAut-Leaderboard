@@ -224,11 +224,68 @@ function actualizarGrafica() {
             responsive: true, 
             maintainAspectRatio: false, 
             
-            // 2. TOOLTIP INDIVIDUAL
-            interaction: {
-                mode: 'nearest', // <-- Solo interactúa con el punto más cercano al mouse
-                intersect: true, // <-- Tenés que pasar el mouse justo por encima del punto
+            // NUEVO: Agregamos margen interno al canvas para que nada se corte arriba
+            layout: {
+                padding: {
+                    top: 15,
+                    right: 20
+                }
             },
+
+            interaction: {
+                mode: 'nearest', 
+                intersect: true, 
+            },
+            
+            scales: {
+                y: {
+                    suggestedMin: 1000, 
+                    suggestedMax: 6000,
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                },
+                x: {
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                }
+            },
+            plugins: { 
+                legend: { 
+                    position: 'top',
+                    labels: { 
+                        color: '#9ca3af', 
+                        usePointStyle: true, 
+                        // 1. ACHICAMOS LOS CÍRCULOS DE LA LEYENDA
+                        boxWidth: 6,   
+                        boxHeight: 6,  
+                        // 3. SEPARAMOS LA LEYENDA DEL GRÁFICO (para que Benji respire)
+                        padding: 15,
+                        font: { size: 11 }
+                    } 
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const jugador = context.dataset.label;
+                            const rangoFormateado = decodificarPuntos(context.parsed.y);
+                            return `${jugador}: ${rangoFormateado}`;
+                        }
+                    }
+                },
+                zoom: {
+                    pan: {
+                        // 2. MOVIMIENTO LIBRE
+                        enabled: true,
+                        mode: 'xy',
+                        threshold: 10 // Hace que el clic sea menos sensible para no confundirlo con un tooltip
+                    },
+                    zoom: {
+                        wheel: { enabled: true }, 
+                        drag: false, // Apagamos el zoom por selección (recuadro)
+                        pinch: { enabled: true }, 
+                        mode: 'xy', 
+                    }
+                }
+            } 
+        },
             
             scales: {
                 y: {
