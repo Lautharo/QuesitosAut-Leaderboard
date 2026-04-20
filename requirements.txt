@@ -3,4 +3,3 @@ flask
 flask-cors
 gunicorn
 pytz
-supabase

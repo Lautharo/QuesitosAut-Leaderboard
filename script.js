@@ -181,6 +181,7 @@ function mostrarScouter(j) {
                 const secondaryRuneIcon = getRuneIcon(p.runes ? p.runes[1] : 0);
                 const r1Html = primaryRuneIcon ? `<img class="m-rune primary" src="${primaryRuneIcon}">` : `<div class="m-rune primary placeholder"></div>`;
                 const r2Html = secondaryRuneIcon ? `<img class="m-rune secondary" src="${secondaryRuneIcon}">` : `<div class="m-rune secondary placeholder"></div>`;
+<<<<<<< HEAD
                 let lpHtml = '';
                 if (!isAram) {
                     if (p.lp_change === 0) {
@@ -191,12 +192,15 @@ function mostrarScouter(j) {
                         lpHtml = `<br><span class="${lpClass}">${lpSign}${p.lp_change} LP</span>`;
                     }
                 }
+=======
+
+>>>>>>> parent of 1dc5d46 (1.11 PRUEBA 1)
                 card.innerHTML = `
                     <div class="m-info">
                         <b style="color:${p.win ? '#2add9c' : '#f25757'}">${p.win ? 'Victoria' : 'Derrota'}</b>
                         <span style="color: var(--amarillo-pro); font-weight: bold; font-size: 0.75rem;">${p.queue_name}</span><br>
                         ${p.fecha} • ${p.duracion}
-                        ${lpHtml}
+                        ${!isAram ? `<br><span class="${p.win ? 'lp-gain' : 'lp-loss'}">${p.win ? '+' : '-'}${p.lp_change || 20} LP</span>` : ''}
                     </div>
                     <div class="m-champ-block">
                         <div class="m-champ-img-container">
