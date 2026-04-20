@@ -1,0 +1,304 @@
+:root {
+	--bg-principal: #0e1015;
+	--bg-tarjeta: #161921;
+	--color-texto: #ffffff;
+	--color-subtexto: #9ca3af;
+	--amarillo-pro: #d4b55c;
+	--amarillo-brillante: #fffae6;
+	--color-emerald: #2add9c;
+	--color-diamond: #5765f2;
+	--color-platinum: #4bcaeb;
+	--color-gold: #f2af42;
+	--color-silver: #a0a0a0;
+	--color-bronze: #cd7f32;
+	--color-iron: #51483c;
+}
+
+body {
+	background-color: var(--bg-principal);
+	color: var(--color-texto);
+	font-family: 'Inter', sans-serif;
+	margin: 0;
+	padding: 20px;
+}
+
+/* CARTEL DE CONSTRUCCIÓN */
+#overlay-mantenimiento {
+	position: fixed;
+	top: 0;
+	left: 0;
+	width: 100%;
+	height: 100%;
+	background: rgba(0,0,0,0.9);
+	z-index: 10000;
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	backdrop-filter: blur(8px);
+}
+
+.cartel-mantenimiento {
+	background: var(--bg-tarjeta);
+	border: 2px solid var(--amarillo-pro);
+	padding: 50px;
+	border-radius: 15px;
+	text-align: center;
+	position: relative;
+	overflow: hidden;
+}
+
+.barra-peligro {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 30px;
+	background: repeating-linear-gradient(45deg, #d4b55c, #d4b55c 15px, #000 15px, #000 30px);
+}
+
+.barra-izq {
+	left: 0;
+}
+
+.barra-der {
+	right: 0;
+}
+
+.super-contenedor {
+	max-width: 1300px;
+	margin: 0 auto;
+	display: flex;
+	flex-direction: column;
+	gap: 20px;
+}
+
+.cabecera {
+	display: flex;
+	justify-content: space-between;
+	align-items: center;
+	border-bottom: 1px solid #2d3748;
+	padding-bottom: 15px;
+}
+
+h1 {
+	margin: 0;
+	color: var(--amarillo-brillante);
+	font-weight: 800;
+}
+
+.tabs {
+	display: flex;
+	gap: 10px;
+	margin-bottom: 5px;
+}
+
+.tab-btn {
+	background: #1a202c;
+	border: 1px solid #2d3748;
+	color: white;
+	padding: 8px 20px;
+	border-radius: 5px;
+	cursor: pointer;
+	font-weight: bold;
+}
+
+	.tab-btn.active {
+		border-color: var(--amarillo-pro);
+		color: var(--amarillo-pro);
+		background: #1e2328;
+	}
+
+.seccion-principal {
+	display: flex;
+	gap: 20px;
+	flex-wrap: wrap;
+}
+
+.contenedor-tabla {
+	flex: 2;
+	min-width: 600px;
+	background-color: var(--bg-tarjeta);
+	border-radius: 12px;
+	padding: 10px;
+	border: 1px solid #2d3748;
+}
+
+.contenedor-grafico {
+	flex: 1;
+	min-width: 400px;
+	background-color: var(--bg-tarjeta);
+	border-radius: 12px;
+	padding: 20px;
+	border: 1px solid #2d3748;
+	height: 600px;
+}
+
+.tabla-leaderboard {
+	width: 100%;
+	border-collapse: collapse;
+}
+
+	.tabla-leaderboard th {
+		text-align: left;
+		color: var(--color-subtexto);
+		font-size: 0.75rem;
+		padding: 10px;
+		border-bottom: 1px solid #2d3748;
+	}
+
+.fila-jugador {
+	border-bottom: 1px solid #1a202c;
+	cursor: pointer;
+	transition: 0.2s;
+}
+
+	.fila-jugador:hover {
+		background-color: #1f2937;
+	}
+
+.tabla-leaderboard td {
+	padding: 8px 10px;
+}
+
+/* ICONOS GIGANTES Y ALINEACIÓN */
+.col-rango-completo {
+	display: flex;
+	align-items: center;
+	justify-content: center;
+	height: 85px;
+	overflow: hidden;
+}
+
+.contenedor-icono-fijo {
+	width: 80px;
+	display: flex;
+	justify-content: center;
+	align-items: center;
+}
+
+.rank-icon {
+	width: 110px;
+	height: 110px;
+	object-fit: contain;
+	transform: scale(2.5);
+	filter: drop-shadow(0 0 10px rgba(0,0,0,0.5));
+}
+
+.rank-info-texto {
+	width: 160px;
+	text-align: left;
+	padding-left: 10px;
+	z-index: 10;
+}
+
+/* LP CENTRADO */
+.lp-progress-container {
+	width: 100%;
+	height: 18px;
+	background-color: #2d3748;
+	border-radius: 10px;
+	margin-top: 5px;
+	overflow: hidden;
+	position: relative;
+}
+
+.lp-progress-fill {
+	height: 100%;
+	border-radius: 2px;
+	transition: width 0.5s ease;
+}
+
+.lp-text-centered {
+	position: absolute;
+	width: 100%;
+	top: 0;
+	left: 0;
+	text-align: center;
+	font-size: 0.75rem;
+	line-height: 18px;
+	font-weight: 800;
+	color: white;
+	text-shadow: 1px 1px 2px black;
+}
+
+/* SCOUTER ESTILO ELMIILLOR */
+.seccion-scouter {
+	margin-top: 20px;
+	background: var(--bg-tarjeta);
+	border-radius: 12px;
+	padding: 25px;
+	border: 1px solid #2d3748;
+	display: none;
+}
+
+.match-card {
+	display: grid;
+	grid-template-columns: 130px 180px 150px 240px 1fr;
+	align-items: center;
+	padding: 15px;
+	margin-bottom: 12px;
+	border-radius: 10px;
+	background: #1c1f26;
+	border-left: 6px solid #555;
+}
+
+	.match-card.win {
+		border-left-color: var(--color-emerald);
+		background: rgba(42, 221, 156, 0.05);
+	}
+
+	.match-card.loss {
+		border-left-color: #f25757;
+		background: rgba(242, 87, 87, 0.05);
+	}
+
+.player-row.me b {
+	color: var(--color-gold) !important;
+	font-weight: 800;
+}
+
+.player-row {
+	display: flex;
+	align-items: center;
+	gap: 5px;
+	font-size: 0.7rem;
+	color: #ccc;
+	margin-bottom: 2px;
+}
+
+	.player-row img {
+		width: 16px;
+		height: 16px;
+		border-radius: 2px;
+	}
+
+.rank-EMERALD {
+	color: var(--color-emerald);
+}
+
+.rank-DIAMOND {
+	color: var(--color-diamond);
+}
+
+.rank-PLATINUM {
+	color: var(--color-platinum);
+}
+
+.rank-GOLD {
+	color: var(--color-gold);
+}
+
+.rank-SILVER {
+	color: var(--color-silver);
+}
+
+.rank-BRONZE {
+	color: var(--color-bronze);
+}
+
+.rank-IRON {
+	color: var(--color-iron);
+}
+
+.rank-UNRANKED {
+	color: var(--color-subtexto);
+}

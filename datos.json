@@ -1,28 +1,12 @@
-<<<<<<< HEAD
 [
     {
         "nombre": "AU l Thxgzz",
         "tag": "777",
         "last_game": "19/04",
         "historiales": {
-            "soloq": [
-                {
-                    "fecha": "19/04",
-                    "puntos": 5118
-                }
-            ],
-            "flex": [
-                {
-                    "fecha": "19/04",
-                    "puntos": 3171
-                }
-            ],
-            "aram": [
-                {
-                    "fecha": "19/04",
-                    "puntos": 66.7
-                }
-            ]
+            "soloq": [],
+            "flex": [],
+            "aram": []
         },
         "soloq": {
             "tier": "EMERALD",
@@ -36,11 +20,11 @@
         "flex": {
             "tier": "GOLD",
             "rank": "IV",
-            "lp": 71,
-            "wins": 219,
+            "lp": 92,
+            "wins": 220,
             "losses": 198,
-            "wr": 52.5,
-            "puntos_grafica": 3171
+            "wr": 52.6,
+            "puntos_grafica": 3192
         },
         "aram": {
             "tier": "UNRANKED",
@@ -796,6 +780,80 @@
                 {
                     "win": true,
                     "champ": "LeeSin",
+                    "lvl": 20,
+                    "k": 5,
+                    "d": 8,
+                    "a": 9,
+                    "cs": 294,
+                    "items": [
+                        3074,
+                        6692,
+                        3047,
+                        6610,
+                        2517,
+                        1055,
+                        3340
+                    ],
+                    "role": "TOP",
+                    "summoners": [
+                        "SummonerTeleport",
+                        "SummonerFlash"
+                    ],
+                    "runas": [
+                        8010,
+                        8100
+                    ],
+                    "lp_change": 22,
+                    "duracion": "40:35",
+                    "fecha": "19/04",
+                    "team1": [
+                        {
+                            "name": "AU l Thxgzz",
+                            "champ": "LeeSin"
+                        },
+                        {
+                            "name": "Gusanopubic0xxx",
+                            "champ": "Zac"
+                        },
+                        {
+                            "name": "AU l benji",
+                            "champ": "AurelionSol"
+                        },
+                        {
+                            "name": "AU l Ferry",
+                            "champ": "Smolder"
+                        },
+                        {
+                            "name": "SANTOS",
+                            "champ": "Velkoz"
+                        }
+                    ],
+                    "team2": [
+                        {
+                            "name": "Kawasaki",
+                            "champ": "Skarner"
+                        },
+                        {
+                            "name": "chanta vendehumo",
+                            "champ": "Graves"
+                        },
+                        {
+                            "name": "angelmois",
+                            "champ": "Garen"
+                        },
+                        {
+                            "name": "Peso deidad",
+                            "champ": "Tristana"
+                        },
+                        {
+                            "name": "OrnnlyFanss",
+                            "champ": "Thresh"
+                        }
+                    ]
+                },
+                {
+                    "win": true,
+                    "champ": "LeeSin",
                     "lvl": 18,
                     "k": 21,
                     "d": 10,
@@ -1458,80 +1516,6 @@
                             "champ": "Nautilus"
                         }
                     ]
-                },
-                {
-                    "win": true,
-                    "champ": "LeeSin",
-                    "lvl": 16,
-                    "k": 18,
-                    "d": 2,
-                    "a": 11,
-                    "cs": 200,
-                    "items": [
-                        6692,
-                        6610,
-                        3111,
-                        6333,
-                        2021,
-                        1037,
-                        3340
-                    ],
-                    "role": "JUNGLE",
-                    "summoners": [
-                        "SummonerSmite",
-                        "SummonerFlash"
-                    ],
-                    "runas": [
-                        8010,
-                        8100
-                    ],
-                    "lp_change": 22,
-                    "duracion": "27:34",
-                    "fecha": "14/04",
-                    "team1": [
-                        {
-                            "name": "NoFlacows",
-                            "champ": "Gangplank"
-                        },
-                        {
-                            "name": "Gonzaz1627",
-                            "champ": "Jax"
-                        },
-                        {
-                            "name": "AstroBoy",
-                            "champ": "Aurora"
-                        },
-                        {
-                            "name": "RDshin1",
-                            "champ": "Jhin"
-                        },
-                        {
-                            "name": "EsdrasAlv",
-                            "champ": "Braum"
-                        }
-                    ],
-                    "team2": [
-                        {
-                            "name": "AU l benji",
-                            "champ": "Sion"
-                        },
-                        {
-                            "name": "AU l Thxgzz",
-                            "champ": "LeeSin"
-                        },
-                        {
-                            "name": "witchklakla",
-                            "champ": "Lux"
-                        },
-                        {
-                            "name": "Scaloneta",
-                            "champ": "Ashe"
-                        },
-                        {
-                            "name": "bobygoma",
-                            "champ": "Brand"
-                        }
-                    ]
                 }
             ],
             "aram": [
@@ -1765,24 +1749,9 @@
         "tag": "2504",
         "last_game": "19/04",
         "historiales": {
-            "soloq": [
-                {
-                    "fecha": "19/04",
-                    "puntos": 3119
-                }
-            ],
-            "flex": [
-                {
-                    "fecha": "19/04",
-                    "puntos": 3140
-                }
-            ],
-            "aram": [
-                {
-                    "fecha": "19/04",
-                    "puntos": 75.0
-                }
-            ]
+            "soloq": [],
+            "flex": [],
+            "aram": []
         },
         "soloq": {
             "tier": "GOLD",
@@ -1797,8 +1766,8 @@
             "tier": "GOLD",
             "rank": "IV",
             "lp": 40,
-            "wins": 207,
-            "losses": 191,
+            "wins": 208,
+            "losses": 192,
             "wr": 52.0,
             "puntos_grafica": 3140
         },
@@ -2555,6 +2524,154 @@
             "flex": [
                 {
                     "win": true,
+                    "champ": "Smolder",
+                    "lvl": 18,
+                    "k": 22,
+                    "d": 5,
+                    "a": 9,
+                    "cs": 313,
+                    "items": [
+                        3031,
+                        3508,
+                        3161,
+                        2517,
+                        3036,
+                        3026,
+                        3340
+                    ],
+                    "role": "BOTTOM",
+                    "summoners": [
+                        "SummonerFlash",
+                        "SummonerBarrier"
+                    ],
+                    "runas": [
+                        8021,
+                        8200
+                    ],
+                    "lp_change": 22,
+                    "duracion": "40:35",
+                    "fecha": "19/04",
+                    "team1": [
+                        {
+                            "name": "AU l Thxgzz",
+                            "champ": "LeeSin"
+                        },
+                        {
+                            "name": "Gusanopubic0xxx",
+                            "champ": "Zac"
+                        },
+                        {
+                            "name": "AU l benji",
+                            "champ": "AurelionSol"
+                        },
+                        {
+                            "name": "AU l Ferry",
+                            "champ": "Smolder"
+                        },
+                        {
+                            "name": "SANTOS",
+                            "champ": "Velkoz"
+                        }
+                    ],
+                    "team2": [
+                        {
+                            "name": "Kawasaki",
+                            "champ": "Skarner"
+                        },
+                        {
+                            "name": "chanta vendehumo",
+                            "champ": "Graves"
+                        },
+                        {
+                            "name": "angelmois",
+                            "champ": "Garen"
+                        },
+                        {
+                            "name": "Peso deidad",
+                            "champ": "Tristana"
+                        },
+                        {
+                            "name": "OrnnlyFanss",
+                            "champ": "Thresh"
+                        }
+                    ]
+                },
+                {
+                    "win": false,
+                    "champ": "Vayne",
+                    "lvl": 15,
+                    "k": 5,
+                    "d": 6,
+                    "a": 5,
+                    "cs": 211,
+                    "items": [
+                        3124,
+                        6672,
+                        3302,
+                        1042,
+                        1037,
+                        0,
+                        3340
+                    ],
+                    "role": "BOTTOM",
+                    "summoners": [
+                        "SummonerFlash",
+                        "SummonerBarrier"
+                    ],
+                    "runas": [
+                        8008,
+                        8400
+                    ],
+                    "lp_change": 19,
+                    "duracion": "33:36",
+                    "fecha": "19/04",
+                    "team1": [
+                        {
+                            "name": "WahTongKungliao",
+                            "champ": "Darius"
+                        },
+                        {
+                            "name": "Kiryu Coconut",
+                            "champ": "Shyvana"
+                        },
+                        {
+                            "name": "Zuramaru",
+                            "champ": "Syndra"
+                        },
+                        {
+                            "name": "Geratul",
+                            "champ": "Jhin"
+                        },
+                        {
+                            "name": "Jayrt",
+                            "champ": "Soraka"
+                        }
+                    ],
+                    "team2": [
+                        {
+                            "name": "pq sigo a mike",
+                            "champ": "Teemo"
+                        },
+                        {
+                            "name": "Murs",
+                            "champ": "Jax"
+                        },
+                        {
+                            "name": "XVenecasHunterX",
+                            "champ": "TwistedFate"
+                        },
+                        {
+                            "name": "AU l Ferry",
+                            "champ": "Vayne"
+                        },
+                        {
+                            "name": "makkapi123",
+                            "champ": "Leona"
+                        }
+                    ]
+                },
+                {
+                    "win": true,
                     "champ": "Vayne",
                     "lvl": 16,
                     "k": 8,
@@ -3144,154 +3261,6 @@
                             "champ": "Pyke"
                         }
                     ]
-                },
-                {
-                    "win": false,
-                    "champ": "Vayne",
-                    "lvl": 9,
-                    "k": 0,
-                    "d": 0,
-                    "a": 0,
-                    "cs": 112,
-                    "items": [
-                        1055,
-                        1083,
-                        6672,
-                        1042,
-                        1042,
-                        0,
-                        3340
-                    ],
-                    "role": "BOTTOM",
-                    "summoners": [
-                        "SummonerFlash",
-                        "SummonerBarrier"
-                    ],
-                    "runas": [
-                        8008,
-                        8400
-                    ],
-                    "lp_change": 19,
-                    "duracion": "15:14",
-                    "fecha": "16/04",
-                    "team1": [
-                        {
-                            "name": "AU l Osiris",
-                            "champ": "Sett"
-                        },
-                        {
-                            "name": "EscondanSusPit0s",
-                            "champ": "MonkeyKing"
-                        },
-                        {
-                            "name": "TuC0laJuguet0na",
-                            "champ": "Katarina"
-                        },
-                        {
-                            "name": "AU l Ferry",
-                            "champ": "Vayne"
-                        },
-                        {
-                            "name": "Pirulin",
-                            "champ": "Milio"
-                        }
-                    ],
-                    "team2": [
-                        {
-                            "name": "Stikii",
-                            "champ": "Volibear"
-                        },
-                        {
-                            "name": "Leirtio",
-                            "champ": "Skarner"
-                        },
-                        {
-                            "name": "Zleakz",
-                            "champ": "Hwei"
-                        },
-                        {
-                            "name": "PatagonKratoS",
-                            "champ": "Caitlyn"
-                        },
-                        {
-                            "name": "Seraphi94",
-                            "champ": "Lux"
-                        }
-                    ]
-                },
-                {
-                    "win": false,
-                    "champ": "Vayne",
-                    "lvl": 16,
-                    "k": 11,
-                    "d": 3,
-                    "a": 3,
-                    "cs": 254,
-                    "items": [
-                        2019,
-                        3153,
-                        6672,
-                        3124,
-                        3302,
-                        1038,
-                        3340
-                    ],
-                    "role": "BOTTOM",
-                    "summoners": [
-                        "SummonerFlash",
-                        "SummonerBarrier"
-                    ],
-                    "runas": [
-                        8008,
-                        8400
-                    ],
-                    "lp_change": 19,
-                    "duracion": "34:10",
-                    "fecha": "15/04",
-                    "team1": [
-                        {
-                            "name": "XCriadoenLobosX",
-                            "champ": "Trundle"
-                        },
-                        {
-                            "name": "AU l Thxgzz",
-                            "champ": "Shaco"
-                        },
-                        {
-                            "name": "AU l benji",
-                            "champ": "Galio"
-                        },
-                        {
-                            "name": "AU l Ferry",
-                            "champ": "Vayne"
-                        },
-                        {
-                            "name": "SrNight",
-                            "champ": "Nautilus"
-                        }
-                    ],
-                    "team2": [
-                        {
-                            "name": "MrGanzo69",
-                            "champ": "Gwen"
-                        },
-                        {
-                            "name": "SENKU",
-                            "champ": "Vi"
-                        },
-                        {
-                            "name": "Femboy Enjoyer",
-                            "champ": "Zed"
-                        },
-                        {
-                            "name": "Niaasssk",
-                            "champ": "Caitlyn"
-                        },
-                        {
-                            "name": "Catt ﾒ",
-                            "champ": "Senna"
-                        }
-                    ]
                 }
             ],
             "aram": [
@@ -3599,42 +3568,27 @@
         "tag": "777",
         "last_game": "19/04",
         "historiales": {
-            "soloq": [
-                {
-                    "fecha": "19/04",
-                    "puntos": 2306
-                }
-            ],
-            "flex": [
-                {
-                    "fecha": "19/04",
-                    "puntos": 2150
-                }
-            ],
-            "aram": [
-                {
-                    "fecha": "19/04",
-                    "puntos": 75.0
-                }
-            ]
+            "soloq": [],
+            "flex": [],
+            "aram": []
         },
         "soloq": {
             "tier": "SILVER",
             "rank": "II",
-            "lp": 6,
-            "wins": 100,
-            "losses": 91,
-            "wr": 52.4,
-            "puntos_grafica": 2306
+            "lp": 8,
+            "wins": 101,
+            "losses": 92,
+            "wr": 52.3,
+            "puntos_grafica": 2308
         },
         "flex": {
             "tier": "SILVER",
             "rank": "IV",
-            "lp": 50,
-            "wins": 157,
+            "lp": 70,
+            "wins": 158,
             "losses": 146,
-            "wr": 51.8,
-            "puntos_grafica": 2150
+            "wr": 52.0,
+            "puntos_grafica": 2170
         },
         "aram": {
             "tier": "UNRANKED",
@@ -3645,6 +3599,154 @@
         },
         "partidas": {
             "soloq": [
+                {
+                    "win": false,
+                    "champ": "AurelionSol",
+                    "lvl": 17,
+                    "k": 5,
+                    "d": 7,
+                    "a": 13,
+                    "cs": 233,
+                    "items": [
+                        3157,
+                        3116,
+                        3175,
+                        2503,
+                        4630,
+                        1026,
+                        3340
+                    ],
+                    "role": "MIDDLE",
+                    "summoners": [
+                        "SummonerTeleport",
+                        "SummonerFlash"
+                    ],
+                    "runas": [
+                        8229,
+                        8400
+                    ],
+                    "lp_change": 19,
+                    "duracion": "35:38",
+                    "fecha": "19/04",
+                    "team1": [
+                        {
+                            "name": "MAKINA20SEXUAL1T",
+                            "champ": "Teemo"
+                        },
+                        {
+                            "name": "EDDY JUICE",
+                            "champ": "Sylas"
+                        },
+                        {
+                            "name": "thedragongerd",
+                            "champ": "Malzahar"
+                        },
+                        {
+                            "name": "L13BE",
+                            "champ": "Yunara"
+                        },
+                        {
+                            "name": "mama cocina",
+                            "champ": "Mel"
+                        }
+                    ],
+                    "team2": [
+                        {
+                            "name": "DrkLucian",
+                            "champ": "Sett"
+                        },
+                        {
+                            "name": "SorrySoyPapá",
+                            "champ": "Kayn"
+                        },
+                        {
+                            "name": "AU l benji",
+                            "champ": "AurelionSol"
+                        },
+                        {
+                            "name": "ELpitinCortito",
+                            "champ": "Ezreal"
+                        },
+                        {
+                            "name": "EmotionalControl",
+                            "champ": "Senna"
+                        }
+                    ]
+                },
+                {
+                    "win": true,
+                    "champ": "AurelionSol",
+                    "lvl": 17,
+                    "k": 7,
+                    "d": 4,
+                    "a": 10,
+                    "cs": 202,
+                    "items": [
+                        3116,
+                        3175,
+                        2503,
+                        8010,
+                        1052,
+                        0,
+                        3340
+                    ],
+                    "role": "MIDDLE",
+                    "summoners": [
+                        "SummonerTeleport",
+                        "SummonerFlash"
+                    ],
+                    "runas": [
+                        8229,
+                        8400
+                    ],
+                    "lp_change": 22,
+                    "duracion": "28:57",
+                    "fecha": "19/04",
+                    "team1": [
+                        {
+                            "name": "Mariaツ",
+                            "champ": "Senna"
+                        },
+                        {
+                            "name": "xJinbe",
+                            "champ": "Jax"
+                        },
+                        {
+                            "name": "Pekation",
+                            "champ": "Azir"
+                        },
+                        {
+                            "name": "RazedShuriken",
+                            "champ": "Jinx"
+                        },
+                        {
+                            "name": "MoonMan",
+                            "champ": "Sona"
+                        }
+                    ],
+                    "team2": [
+                        {
+                            "name": "yuiouwu",
+                            "champ": "Akali"
+                        },
+                        {
+                            "name": "NACHOSP99",
+                            "champ": "Nocturne"
+                        },
+                        {
+                            "name": "AU l benji",
+                            "champ": "AurelionSol"
+                        },
+                        {
+                            "name": "R E Y K Ø",
+                            "champ": "Veigar"
+                        },
+                        {
+                            "name": "omaic4t",
+                            "champ": "Zyra"
+                        }
+                    ]
+                },
                 {
                     "win": false,
                     "champ": "Volibear",
@@ -4236,22 +4338,24 @@
                             "champ": "Leona"
                         }
                     ]
-                },
+                }
+            ],
+            "flex": [
                 {
                     "win": true,
                     "champ": "AurelionSol",
                     "lvl": 18,
-                    "k": 12,
-                    "d": 9,
-                    "a": 18,
-                    "cs": 215,
+                    "k": 8,
+                    "d": 6,
+                    "a": 12,
+                    "cs": 324,
                     "items": [
-                        3157,
-                        2503,
                         3175,
-                        8010,
+                        2503,
                         3116,
-                        1058,
+                        4645,
+                        6653,
+                        3089,
                         3340
                     ],
                     "role": "MIDDLE",
@@ -4264,129 +4368,53 @@
                         8400
                     ],
                     "lp_change": 22,
-                    "duracion": "39:02",
-                    "fecha": "18/04",
+                    "duracion": "40:35",
+                    "fecha": "19/04",
                     "team1": [
                         {
-                            "name": "Tidaldgg",
-                            "champ": "TahmKench"
+                            "name": "AU l Thxgzz",
+                            "champ": "LeeSin"
                         },
                         {
-                            "name": "touuers",
-                            "champ": "Kindred"
+                            "name": "Gusanopubic0xxx",
+                            "champ": "Zac"
                         },
                         {
                             "name": "AU l benji",
                             "champ": "AurelionSol"
                         },
                         {
-                            "name": "Valm040408",
-                            "champ": "MissFortune"
+                            "name": "AU l Ferry",
+                            "champ": "Smolder"
                         },
                         {
-                            "name": "pantheonmilove",
-                            "champ": "Neeko"
+                            "name": "SANTOS",
+                            "champ": "Velkoz"
                         }
                     ],
                     "team2": [
                         {
-                            "name": "CpapuFitness Man",
-                            "champ": "Sett"
+                            "name": "Kawasaki",
+                            "champ": "Skarner"
                         },
                         {
-                            "name": "buum",
-                            "champ": "Kayn"
+                            "name": "chanta vendehumo",
+                            "champ": "Graves"
                         },
                         {
-                            "name": "Retrazo",
-                            "champ": "Jhin"
+                            "name": "angelmois",
+                            "champ": "Garen"
                         },
                         {
-                            "name": "LordIce26",
-                            "champ": "Ashe"
+                            "name": "Peso deidad",
+                            "champ": "Tristana"
                         },
                         {
-                            "name": "Gonna19",
-                            "champ": "Morgana"
+                            "name": "OrnnlyFanss",
+                            "champ": "Thresh"
                         }
                     ]
                 },
-                {
-                    "win": false,
-                    "champ": "AurelionSol",
-                    "lvl": 14,
-                    "k": 2,
-                    "d": 8,
-                    "a": 4,
-                    "cs": 198,
-                    "items": [
-                        1052,
-                        2503,
-                        3175,
-                        3108,
-                        3116,
-                        3916,
-                        3340
-                    ],
-                    "role": "MIDDLE",
-                    "summoners": [
-                        "SummonerTeleport",
-                        "SummonerFlash"
-                    ],
-                    "runas": [
-                        8229,
-                        8400
-                    ],
-                    "lp_change": 19,
-                    "duracion": "28:52",
-                    "fecha": "18/04",
-                    "team1": [
-                        {
-                            "name": "Edojota",
-                            "champ": "Illaoi"
-                        },
-                        {
-                            "name": "Hermesx3grande",
-                            "champ": "Kayn"
-                        },
-                        {
-                            "name": "Xure big cut",
-                            "champ": "Sylas"
-                        },
-                        {
-                            "name": "Postmortem",
-                            "champ": "Ezreal"
-                        },
-                        {
-                            "name": "SrJo",
-                            "champ": "Morgana"
-                        }
-                    ],
-                    "team2": [
-                        {
-                            "name": "gandore",
-                            "champ": "Heimerdinger"
-                        },
-                        {
-                            "name": "NIKZOO",
-                            "champ": "MasterYi"
-                        },
-                        {
-                            "name": "AU l benji",
-                            "champ": "AurelionSol"
-                        },
-                        {
-                            "name": "JulioCortazar",
-                            "champ": "Caitlyn"
-                        },
-                        {
-                            "name": "soyproplayer98",
-                            "champ": "Lux"
-                        }
-                    ]
-                }
-            ],
-            "flex": [
                 {
                     "win": true,
                     "champ": "AurelionSol",
@@ -5052,80 +5080,6 @@
                             "champ": "Senna"
                         }
                     ]
-                },
-                {
-                    "win": false,
-                    "champ": "Sett",
-                    "lvl": 19,
-                    "k": 19,
-                    "d": 12,
-                    "a": 12,
-                    "cs": 208,
-                    "items": [
-                        3053,
-                        6631,
-                        3009,
-                        3161,
-                        2501,
-                        3181,
-                        3340
-                    ],
-                    "role": "TOP",
-                    "summoners": [
-                        "SummonerIgnite",
-                        "SummonerFlash"
-                    ],
-                    "runas": [
-                        8005,
-                        8400
-                    ],
-                    "lp_change": 19,
-                    "duracion": "37:53",
-                    "fecha": "12/04",
-                    "team1": [
-                        {
-                            "name": "AL06LAAZ",
-                            "champ": "Garen"
-                        },
-                        {
-                            "name": "AHStrauss",
-                            "champ": "Lillia"
-                        },
-                        {
-                            "name": "mangelo1234",
-                            "champ": "Mel"
-                        },
-                        {
-                            "name": "Lord Cuyo",
-                            "champ": "MissFortune"
-                        },
-                        {
-                            "name": "Lecni",
-                            "champ": "Blitzcrank"
-                        }
-                    ],
-                    "team2": [
-                        {
-                            "name": "AU l benji",
-                            "champ": "Sett"
-                        },
-                        {
-                            "name": "AU l Thxgzz",
-                            "champ": "Zed"
-                        },
-                        {
-                            "name": "EAZY E",
-                            "champ": "Cassiopeia"
-                        },
-                        {
-                            "name": "gıan ネ",
-                            "champ": "Lucian"
-                        },
-                        {
-                            "name": "RaizenTech",
-                            "champ": "Nautilus"
-                        }
-                    ]
                 }
             ],
             "aram": [
@@ -5433,24 +5387,9 @@
         "tag": "2007",
         "last_game": "16/04",
         "historiales": {
-            "soloq": [
-                {
-                    "fecha": "19/04",
-                    "puntos": 1272
-                }
-            ],
-            "flex": [
-                {
-                    "fecha": "19/04",
-                    "puntos": 1269
-                }
-            ],
-            "aram": [
-                {
-                    "fecha": "19/04",
-                    "puntos": 30.0
-                }
-            ]
+            "soloq": [],
+            "flex": [],
+            "aram": []
         },
         "soloq": {
             "tier": "BRONZE",
@@ -7711,24 +7650,9 @@
         "tag": "Kaiju",
         "last_game": "15/04",
         "historiales": {
-            "soloq": [
-                {
-                    "fecha": "19/04",
-                    "puntos": 5100
-                }
-            ],
-            "flex": [
-                {
-                    "fecha": "19/04",
-                    "puntos": 5483
-                }
-            ],
-            "aram": [
-                {
-                    "fecha": "19/04",
-                    "puntos": 40.0
-                }
-            ]
+            "soloq": [],
+            "flex": [],
+            "aram": []
         },
         "soloq": {
             "tier": "EMERALD",
@@ -7742,11 +7666,11 @@
         "flex": {
             "tier": "EMERALD",
             "rank": "I",
-            "lp": 83,
+            "lp": 70,
             "wins": 7,
-            "losses": 9,
-            "wr": 43.8,
-            "puntos_grafica": 5483
+            "losses": 10,
+            "wr": 41.2,
+            "puntos_grafica": 5470
         },
         "aram": {
             "tier": "UNRANKED",
@@ -8500,6 +8424,80 @@
             ],
             "flex": [
                 {
+                    "win": false,
+                    "champ": "Jax",
+                    "lvl": 17,
+                    "k": 6,
+                    "d": 5,
+                    "a": 5,
+                    "cs": 221,
+                    "items": [
+                        2055,
+                        3157,
+                        6610,
+                        3047,
+                        2019,
+                        3078,
+                        3340
+                    ],
+                    "role": "JUNGLE",
+                    "summoners": [
+                        "SummonerFlash",
+                        "SummonerSmite"
+                    ],
+                    "runas": [
+                        8008,
+                        8300
+                    ],
+                    "lp_change": 19,
+                    "duracion": "33:36",
+                    "fecha": "19/04",
+                    "team1": [
+                        {
+                            "name": "WahTongKungliao",
+                            "champ": "Darius"
+                        },
+                        {
+                            "name": "Kiryu Coconut",
+                            "champ": "Shyvana"
+                        },
+                        {
+                            "name": "Zuramaru",
+                            "champ": "Syndra"
+                        },
+                        {
+                            "name": "Geratul",
+                            "champ": "Jhin"
+                        },
+                        {
+                            "name": "Jayrt",
+                            "champ": "Soraka"
+                        }
+                    ],
+                    "team2": [
+                        {
+                            "name": "pq sigo a mike",
+                            "champ": "Teemo"
+                        },
+                        {
+                            "name": "Murs",
+                            "champ": "Jax"
+                        },
+                        {
+                            "name": "XVenecasHunterX",
+                            "champ": "TwistedFate"
+                        },
+                        {
+                            "name": "AU l Ferry",
+                            "champ": "Vayne"
+                        },
+                        {
+                            "name": "makkapi123",
+                            "champ": "Leona"
+                        }
+                    ]
+                },
+                {
                     "win": true,
                     "champ": "LeeSin",
                     "lvl": 18,
@@ -9162,80 +9160,6 @@
                         {
                             "name": "Ðark0",
                             "champ": "Nami"
-                        }
-                    ]
-                },
-                {
-                    "win": true,
-                    "champ": "Lillia",
-                    "lvl": 18,
-                    "k": 17,
-                    "d": 3,
-                    "a": 16,
-                    "cs": 301,
-                    "items": [
-                        2503,
-                        3157,
-                        3020,
-                        4633,
-                        3116,
-                        6653,
-                        3364
-                    ],
-                    "role": "JUNGLE",
-                    "summoners": [
-                        "SummonerFlash",
-                        "SummonerSmite"
-                    ],
-                    "runas": [
-                        8010,
-                        8300
-                    ],
-                    "lp_change": 22,
-                    "duracion": "36:16",
-                    "fecha": "05/04",
-                    "team1": [
-                        {
-                            "name": "Juani",
-                            "champ": "Urgot"
-                        },
-                        {
-                            "name": "Szreal",
-                            "champ": "Vi"
-                        },
-                        {
-                            "name": "L4ur3ann",
-                            "champ": "Veigar"
-                        },
-                        {
-                            "name": "Phairoo ",
-                            "champ": "Ashe"
-                        },
-                        {
-                            "name": "Klebrig",
-                            "champ": "Rell"
-                        }
-                    ],
-                    "team2": [
-                        {
-                            "name": "Quesito Gruyere",
-                            "champ": "Volibear"
-                        },
-                        {
-                            "name": "Murs",
-                            "champ": "Lillia"
-                        },
-                        {
-                            "name": "AU l Osiris",
-                            "champ": "Akshan"
-                        },
-                        {
-                            "name": "AU l Ferry",
-                            "champ": "Vayne"
-                        },
-                        {
-                            "name": "AU l Thxgzz",
-                            "champ": "Alistar"
                         }
                     ]
                 }
@@ -9989,24 +9913,9 @@
         "tag": "Toxic",
         "last_game": "15/04",
         "historiales": {
-            "soloq": [
-                {
-                    "fecha": "19/04",
-                    "puntos": 1235
-                }
-            ],
-            "flex": [
-                {
-                    "fecha": "19/04",
-                    "puntos": 2119
-                }
-            ],
-            "aram": [
-                {
-                    "fecha": "19/04",
-                    "puntos": 80.0
-                }
-            ]
+            "soloq": [],
+            "flex": [],
+            "aram": []
         },
         "soloq": {
             "tier": "BRONZE",
@@ -12267,24 +12176,9 @@
         "tag": "IDK",
         "last_game": "22/02",
         "historiales": {
-            "soloq": [
-                {
-                    "fecha": "19/04",
-                    "puntos": 2226
-                }
-            ],
-            "flex": [
-                {
-                    "fecha": "19/04",
-                    "puntos": 2155
-                }
-            ],
-            "aram": [
-                {
-                    "fecha": "19/04",
-                    "puntos": 90.0
-                }
-            ]
+            "soloq": [],
+            "flex": [],
+            "aram": []
         },
         "soloq": {
             "tier": "SILVER",
@@ -14545,24 +14439,9 @@
         "tag": "Out",
         "last_game": "18/04",
         "historiales": {
-            "soloq": [
-                {
-                    "fecha": "19/04",
-                    "puntos": 2336
-                }
-            ],
-            "flex": [
-                {
-                    "fecha": "19/04",
-                    "puntos": 3107
-                }
-            ],
-            "aram": [
-                {
-                    "fecha": "19/04",
-                    "puntos": 30.0
-                }
-            ]
+            "soloq": [],
+            "flex": [],
+            "aram": []
         },
         "soloq": {
             "tier": "SILVER",
@@ -16818,95 +16697,4 @@
             ]
         }
     }
-=======
-[
-    {
-        "nombre": "AU l Thxgzz",
-        "tag": "777",
-        "tier": "EMERALD",
-        "rank": "IV",
-        "lp": 18,
-        "wins": 167,
-        "losses": 150,
-        "winrate": 52.7,
-        "total_games": 317
-    },
-    {
-        "nombre": "Murs",
-        "tag": "Kaiju",
-        "tier": "EMERALD",
-        "rank": "IV",
-        "lp": 0,
-        "wins": 10,
-        "losses": 13,
-        "winrate": 43.5,
-        "total_games": 23
-    },
-    {
-        "nombre": "AU l Ferry",
-        "tag": "2504",
-        "tier": "GOLD",
-        "rank": "IV",
-        "lp": 19,
-        "wins": 111,
-        "losses": 126,
-        "winrate": 46.8,
-        "total_games": 237
-    },
-    {
-        "nombre": "Quesito Gruyere",
-        "tag": "Out",
-        "tier": "SILVER",
-        "rank": "II",
-        "lp": 36,
-        "wins": 25,
-        "losses": 26,
-        "winrate": 49.0,
-        "total_games": 51
-    },
-    {
-        "nombre": "AU l benji",
-        "tag": "777",
-        "tier": "SILVER",
-        "rank": "II",
-        "lp": 6,
-        "wins": 100,
-        "losses": 91,
-        "winrate": 52.4,
-        "total_games": 191
-    },
-    {
-        "nombre": "Quesito Azul",
-        "tag": "IDK",
-        "tier": "SILVER",
-        "rank": "III",
-        "lp": 26,
-        "wins": 4,
-        "losses": 7,
-        "winrate": 36.4,
-        "total_games": 11
-    },
-    {
-        "nombre": "AU l Osiris",
-        "tag": "2007",
-        "tier": "BRONZE",
-        "rank": "III",
-        "lp": 72,
-        "wins": 10,
-        "losses": 11,
-        "winrate": 47.6,
-        "total_games": 21
-    },
-    {
-        "nombre": "XCriadoenLobosX",
-        "tag": "Toxic",
-        "tier": "BRONZE",
-        "rank": "III",
-        "lp": 35,
-        "wins": 14,
-        "losses": 20,
-        "winrate": 41.2,
-        "total_games": 34
-    }
->>>>>>> 0d3d9490ffdc1308cfc2ec2b93acbe58eaacb0e4
 ]

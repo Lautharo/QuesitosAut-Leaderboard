@@ -7,7 +7,7 @@ from datetime import datetime
 # 1. Tu API Key
 API_KEY = os.environ.get("RIOT_API_KEY")
 if not API_KEY:
-    API_KEY = "RIOT_API_KEY"
+    API_KEY = "RGAPI-22714787-af32-4142-b003-f2f8aafe8dc4"
 
 headers = {"X-Riot-Token": API_KEY}
 
