@@ -18,6 +18,23 @@ const COLORES_JUGADORES = {
     "XCriadoenLobosX": "#33FF33"    // Verde Lima
 };
 
+// --- GENERADOR AUTOMÁTICO DE COLORES ---
+function obtenerColor(nombre) {
+    // Si el jugador ya tiene un color fijo asignado, usa ese
+    if (COLORES_JUGADORES[nombre]) return COLORES_JUGADORES[nombre];
+    
+    // Si es un jugador nuevo (como Matti5), inventa un color único basado en su nombre
+    let hash = 0;
+    for (let i = 0; i < nombre.length; i++) {
+        hash = nombre.charCodeAt(i) + ((hash << 5) - hash);
+    }
+    const h = Math.abs(hash) % 360; // Elige un tono de color de 0 a 360
+    const colorDinamico = `hsl(${h}, 85%, 65%)`; // Colores tipo neón/pastel brillantes
+    
+    COLORES_JUGADORES[nombre] = colorDinamico; // Lo guarda para que siempre tenga el mismo color
+    return colorDinamico;
+}
+
 // --- TRADUCTOR DE PUNTOS A RANGO PARA EL TOOLTIP ---
 function decodificarPuntos(puntos) {
     if (puntos < 0) return "UNRANKED";
@@ -188,6 +205,17 @@ function actualizarGrafica() {
     const ctx = document.getElementById('graficoElo').getContext('2d');
     if (miGrafica) miGrafica.destroy();
     
+    // NUEVO: Auto-parchear a los jugadores nuevos (como Matti) para que salgan en su Día 1
+    const hoy = new Date().toLocaleDateString('es-AR', {day: '2-digit', month: '2-digit'});
+    datosGlobales.forEach(j => {
+        if (j.historiales && j.historiales[modoActual] && j.historiales[modoActual].length === 0 && j[modoActual].tier !== "UNRANKED") {
+            j.historiales[modoActual].push({
+                fecha: hoy,
+                puntos: j[modoActual].puntos_grafica
+            });
+        }
+    });
+
     // Filtramos a los que sí tengan historial
     const jugadoresConHistorial = datosGlobales.filter(j => 
         j.historiales && j.historiales[modoActual] && j.historiales[modoActual].length > 0
@@ -202,7 +230,7 @@ function actualizarGrafica() {
     const labels = jugadorMasLargo.historiales[modoActual].map(h => h.fecha);
 
     const datasets = jugadoresConHistorial.map(j => {
-        const colorJugador = COLORES_JUGADORES[j.nombre] || '#ffffff';
+        const colorJugador = obtenerColor(j.nombre); // <--- USAMOS EL GENERADOR AUTOMÁTICO ACÁ
         return {
             label: j.nombre,
             data: j.historiales[modoActual].map(h => h.puntos),
@@ -221,31 +249,19 @@ function actualizarGrafica() {
         options: { 
             responsive: true, 
             maintainAspectRatio: false, 
-            
-            layout: {
-                padding: { top: 15, right: 20 }
-            },
-
-            interaction: {
-                mode: 'nearest', 
-                intersect: true, 
-            },
-            
-            // --- ÚNICO BLOQUE SCALES ---
+            layout: { padding: { top: 15, right: 20 } },
+            interaction: { mode: 'nearest', intersect: true },
             scales: {
                 y: {
                     suggestedMin: 1000, 
                     suggestedMax: 6000,
                     grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                    ticks: {
-                        display: false // <- ACÁ MUEREN LAS LETRAS GRISES
-                    }
+                    ticks: { display: false }
                 },
                 x: {
                     grid: { color: 'rgba(255, 255, 255, 0.05)' }
                 }
             },
-
             plugins: { 
                 legend: { 
                     position: 'top',
@@ -268,17 +284,8 @@ function actualizarGrafica() {
                     }
                 },
                 zoom: {
-                    pan: {
-                        enabled: true,
-                        mode: 'xy',
-                        threshold: 10 
-                    },
-                    zoom: {
-                        wheel: { enabled: true }, 
-                        drag: false, 
-                        pinch: { enabled: true }, 
-                        mode: 'xy', 
-                    }
+                    pan: { enabled: true, mode: 'xy', threshold: 10 },
+                    zoom: { wheel: { enabled: true }, drag: false, pinch: { enabled: true }, mode: 'xy' }
                 }
             } 
         },
