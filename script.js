@@ -4,6 +4,7 @@ let datosGlobales = [];
 let modoActual = 'soloq';
 let miGrafica = null;
 let LOL_VER = "16.8.1"; // Versión base, pero ahora se actualiza sola
+let runesData = [];
 
 // Títulos personalizados para los puestos de ARAM
 const ARAM_TITLES = [
@@ -130,6 +131,17 @@ function mostrarScouter(j) {
 
                 const fixSum = (s) => String(s).replace('Ignite', 'Dot');
 
+                const posIcon = pos !== 'none' && !isAram ? `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-positions/position-icon-${pos}.png` : '';
+
+                // Generar los íconos de las runas
+                const primaryRuneIcon = getRuneIcon(p.runes ? p.runes[0] : 0);
+                const secondaryRuneIcon = getRuneIcon(p.runes ? p.runes[1] : 0);
+                
+                const r1Html = primaryRuneIcon ? `<img class="m-rune primary" src="${primaryRuneIcon}">` : `<div class="m-rune primary placeholder"></div>`;
+                const r2Html = secondaryRuneIcon ? `<img class="m-rune secondary" src="${secondaryRuneIcon}">` : `<div class="m-rune secondary placeholder"></div>`;
+
+                const fixSum = (s) => String(s).replace('Ignite', 'Dot');
+
                 card.innerHTML = `
                     <div class="m-info">
                         <b style="color:${p.win ? '#2add9c' : '#f25757'}">${p.win ? 'Victoria' : 'Derrota'}</b>
@@ -141,11 +153,17 @@ function mostrarScouter(j) {
                         <div class="m-champ-img-container">
                             <img class="main-champ" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${p.champ}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'">
                             <span class="m-lvl">${p.lvl}</span>
-                            ${posIcon ? `<img src="${posIcon}" class="role-icon">` : ''}
+                            ${posIcon ? `<div class="role-icon-container"><img src="${posIcon}" class="role-icon"></div>` : ''}
                         </div>
                         <div class="m-spells-runes">
-                            <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${p.summoners ? fixSum(p.summoners[0]) : 'SummonerFlash'}.png">
-                            <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${p.summoners ? fixSum(p.summoners[1]) : 'SummonerDot'}.png">
+                            <div class="m-sr-col">
+                                <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${p.summoners ? fixSum(p.summoners[0]) : 'SummonerFlash'}.png">
+                                <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${p.summoners ? fixSum(p.summoners[1]) : 'SummonerDot'}.png">
+                            </div>
+                            <div class="m-sr-col">
+                                ${r1Html}
+                                ${r2Html}
+                            </div>
                         </div>
                     </div>
                     <div class="m-stats">
@@ -173,13 +191,33 @@ document.getElementById('update-time').textContent = "SINCRONIZANDO PARCHE...";
 fetch("https://ddragon.leagueoflegends.com/api/versions.json")
     .then(res => res.json())
     .then(versions => {
-        LOL_VER = versions[0]; // Esto siempre agarra el último parche oficial disponible
+        LOL_VER = versions[0]; 
+        // --- NUEVO: Descargar la data de runas dinámicamente ---
+        return fetch(`https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/data/es_AR/runesReforged.json`);
+    })
+    .then(res => res.json())
+    .then(data => {
+        runesData = data; // Guardamos en memoria
         iniciarLeaderboard();
     })
     .catch(() => {
         // Si falla Riot, usamos la versión de respaldo y arrancamos igual
         iniciarLeaderboard();
     });
+
+// --- NUEVO: Helper para buscar la imagen exacta de la runa ---
+function getRuneIcon(id) {
+    if (!runesData || !runesData.length) return '';
+    for (let tree of runesData) {
+        if (tree.id === id) return `https://ddragon.leagueoflegends.com/cdn/img/${tree.icon}`;
+        for (let slot of tree.slots) {
+            for (let rune of slot.runes) {
+                if (rune.id === id) return `https://ddragon.leagueoflegends.com/cdn/img/${rune.icon}`;
+            }
+        }
+    }
+    return '';
+}
 
 function iniciarLeaderboard() {
     document.getElementById('update-time').textContent = "DESPERTANDO SERVIDOR..."; 
