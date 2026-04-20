@@ -104,9 +104,17 @@ function renderizarTabla() {
     tbody.innerHTML = '';
     if (datosGlobales.length === 0) return;
 
-    datosGlobales.sort((a, b) => b[modoActual].puntos_grafica - a[modoActual].puntos_grafica);
+    // Filtro Smurfs
+    const mostrarSmurfs = document.getElementById('filtro-smurf') ? document.getElementById('filtro-smurf').checked : true;
+    let jugadoresA_Mostrar = datosGlobales;
+    
+    if (!mostrarSmurfs) {
+        jugadoresA_Mostrar = datosGlobales.filter(j => j.is_main);
+    }
 
-    datosGlobales.forEach((j, i) => {
+    jugadoresA_Mostrar.sort((a, b) => b[modoActual].puntos_grafica - a[modoActual].puntos_grafica);
+
+    jugadoresA_Mostrar.forEach((j, i) => {
         const stats = j[modoActual];
         const isAram = modoActual === 'aram';
         const color = getComputedStyle(document.documentElement).getPropertyValue(`--color-${stats.tier.toLowerCase()}`).trim() || '#8c52ff';
@@ -157,42 +165,36 @@ const fondoLigasPlugin = {
     beforeDraw: (chart) => {
         const { ctx, chartArea: { top, bottom, left, right }, scales: { y } } = chart;
         
-        // Definimos los rangos de ELO y sus colores (traslúcidos)
         const ligas = [
-            { nombre: "C", min: 9000, color: "rgba(255, 215, 0, 0.05)" },    // Challenger
-            { nombre: "GM", min: 8000, color: "rgba(255, 0, 0, 0.05)" },      // Grandmaster
-            { nombre: "M", min: 7000, color: "rgba(128, 0, 128, 0.05)" },     // Master
-            { nombre: "D", min: 6000, color: "rgba(87, 101, 242, 0.05)" },    // Diamond
-            { nombre: "E", min: 5000, color: "rgba(42, 221, 156, 0.05)" },    // Emerald
-            { nombre: "P", min: 4000, color: "rgba(75, 202, 235, 0.05)" },    // Platinum
-            { nombre: "G", min: 3000, color: "rgba(242, 175, 66, 0.05)" },    // Gold
-            { nombre: "S", min: 2000, color: "rgba(160, 160, 160, 0.05)" },   // Silver
-            { nombre: "B", min: 1000, color: "rgba(205, 127, 50, 0.05)" },    // Bronze
-            { nombre: "I", min: 0, color: "rgba(81, 72, 60, 0.05)" }          // Iron
+            { nombre: "C", min: 9000, color: "rgba(255, 215, 0, 0.05)" },
+            { nombre: "GM", min: 8000, color: "rgba(255, 0, 0, 0.05)" },
+            { nombre: "M", min: 7000, color: "rgba(128, 0, 128, 0.05)" },
+            { nombre: "D", min: 6000, color: "rgba(87, 101, 242, 0.05)" },
+            { nombre: "E", min: 5000, color: "rgba(42, 221, 156, 0.05)" },
+            { nombre: "P", min: 4000, color: "rgba(75, 202, 235, 0.05)" },
+            { nombre: "G", min: 3000, color: "rgba(242, 175, 66, 0.05)" },
+            { nombre: "S", min: 2000, color: "rgba(160, 160, 160, 0.05)" },
+            { nombre: "B", min: 1000, color: "rgba(205, 127, 50, 0.05)" },
+            { nombre: "I", min: 0, color: "rgba(81, 72, 60, 0.05)" }
         ];
 
         ctx.save();
         ligas.forEach((liga, i) => {
-            // Calculamos dónde cae cada límite en el eje Y actual
             const yTop = y.getPixelForValue(ligas[i-1] ? ligas[i-1].min : 10000); 
             const yBottom = y.getPixelForValue(liga.min);
 
-            // Si el rango es visible en el gráfico actual, lo pintamos
             if (yTop < bottom && yBottom > top) {
-                // Pintar el fondo
                 ctx.fillStyle = liga.color;
                 ctx.fillRect(left, Math.max(top, yTop), right - left, Math.min(bottom, yBottom) - Math.max(top, yTop));
                 
-                // Pintar la línea separadora
                 ctx.beginPath();
-                ctx.strokeStyle = "rgba(255, 255, 255, 0.1)"; // Línea blanca suave
-                ctx.setLineDash([5, 5]); // Línea punteada
+                ctx.strokeStyle = "rgba(255, 255, 255, 0.1)"; 
+                ctx.setLineDash([5, 5]); 
                 ctx.moveTo(left, yBottom);
                 ctx.lineTo(right, yBottom);
                 ctx.stroke();
 
-                // Escribir el texto de la liga a la izquierda
-                ctx.fillStyle = liga.color.replace('0.05', '0.5'); // Texto un poco más visible
+                ctx.fillStyle = liga.color.replace('0.05', '0.5'); 
                 ctx.font = "bold 12px Arial";
                 ctx.fillText(liga.nombre, left + 5, yBottom - 5);
             }
@@ -205,7 +207,7 @@ function actualizarGrafica() {
     const ctx = document.getElementById('graficoElo').getContext('2d');
     if (miGrafica) miGrafica.destroy();
     
-    // NUEVO: Auto-parchear a los jugadores nuevos (como Matti) para que salgan en su Día 1
+    // Auto-parchear a los jugadores nuevos (como Matti) para que salgan en su Día 1
     const hoy = new Date().toLocaleDateString('es-AR', {day: '2-digit', month: '2-digit'});
     datosGlobales.forEach(j => {
         if (j.historiales && j.historiales[modoActual] && j.historiales[modoActual].length === 0 && j[modoActual].tier !== "UNRANKED") {
@@ -216,21 +218,27 @@ function actualizarGrafica() {
         }
     });
 
-    // Filtramos a los que sí tengan historial
-    const jugadoresConHistorial = datosGlobales.filter(j => 
+    // Filtro Smurfs para la Gráfica
+    const mostrarSmurfs = document.getElementById('filtro-smurf') ? document.getElementById('filtro-smurf').checked : true;
+    let jugadoresA_Mostrar = datosGlobales;
+    if (!mostrarSmurfs) {
+        jugadoresA_Mostrar = datosGlobales.filter(j => j.is_main);
+    }
+
+    // Filtramos a los que sí tengan historial dentro de la lista seleccionada
+    const jugadoresConHistorial = jugadoresA_Mostrar.filter(j => 
         j.historiales && j.historiales[modoActual] && j.historiales[modoActual].length > 0
     );
 
     if (jugadoresConHistorial.length === 0) return;
 
-    // Tomamos las fechas del que más partidas tenga para el eje X
     const jugadorMasLargo = jugadoresConHistorial.reduce((max, j) => 
         j.historiales[modoActual].length > max.historiales[modoActual].length ? j : max
     );
     const labels = jugadorMasLargo.historiales[modoActual].map(h => h.fecha);
 
     const datasets = jugadoresConHistorial.map(j => {
-        const colorJugador = obtenerColor(j.nombre); // <--- USAMOS EL GENERADOR AUTOMÁTICO ACÁ
+        const colorJugador = obtenerColor(j.nombre);
         return {
             label: j.nombre,
             data: j.historiales[modoActual].map(h => h.puntos),
@@ -265,21 +273,12 @@ function actualizarGrafica() {
             plugins: { 
                 legend: { 
                     position: 'top',
-                    labels: { 
-                        color: '#9ca3af', 
-                        usePointStyle: true, 
-                        boxWidth: 6,   
-                        boxHeight: 6,  
-                        padding: 15,
-                        font: { size: 11 }
-                    } 
+                    labels: { color: '#9ca3af', usePointStyle: true, boxWidth: 6, boxHeight: 6, padding: 15, font: { size: 11 } } 
                 },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            const jugador = context.dataset.label;
-                            const rangoFormateado = decodificarPuntos(context.parsed.y);
-                            return `${jugador}: ${rangoFormateado}`;
+                            return `${context.dataset.label}: ${decodificarPuntos(context.parsed.y)}`;
                         }
                     }
                 },
@@ -500,4 +499,54 @@ function iniciarLeaderboard() {
             document.getElementById('update-time').textContent = "SIN DATOS - ESPERA A RENDER";
             document.getElementById('pantalla-carga').innerHTML = '<h3 style="color:#f25757">Error al conectar. El servidor está dormido o falló.</h3>';
         });
+}
+
+// --- LÓGICA DE LA VENTANA DE AÑADIR CUENTA ---
+function abrirModal() {
+    document.getElementById('modal-agregar').style.display = 'flex';
+}
+
+function cerrarModal() {
+    document.getElementById('modal-agregar').style.display = 'none';
+    document.getElementById('nuevo-nombre').value = '';
+    document.getElementById('nuevo-tag').value = '';
+    document.getElementById('nuevo-ismain').checked = true;
+}
+
+function guardarNuevaCuenta() {
+    const nombre = document.getElementById('nuevo-nombre').value.trim();
+    const tag = document.getElementById('nuevo-tag').value.trim();
+    const isMain = document.getElementById('nuevo-ismain').checked;
+
+    if (!nombre || !tag) {
+        alert("¡Epa! Por favor, completá el nombre y el tag.");
+        return;
+    }
+
+    const btn = document.querySelector('#modal-agregar .btn-actualizar');
+    btn.innerText = "Verificando en Riot...";
+    btn.disabled = true;
+
+    fetch(`${API_URL}/api/jugadores`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ nombre: nombre, tag: tag, is_main: isMain })
+    })
+    .then(res => res.json())
+    .then(data => {
+        if (data.error) {
+            alert(data.error);
+        } else {
+            alert("¡Cuenta agregada con éxito!");
+            cerrarModal();
+            forzarActualizacion(); // Actualizamos la tabla
+        }
+    })
+    .catch(err => {
+        alert("Error de conexión con el servidor.");
+    })
+    .finally(() => {
+        btn.innerText = "Guardar Jugador";
+        btn.disabled = false;
+    });
 }

@@ -21,18 +21,6 @@ SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 headers = {"X-Riot-Token": API_KEY}
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
 
-JUGADORES = [
-    {"nombre": "AU l Thxgzz", "tag": "777"},
-    {"nombre": "AU l Ferry", "tag": "2504"},
-    {"nombre": "AU l benji", "tag": "777"},
-    {"nombre": "AU l Osiris", "tag": "2007"},
-    {"nombre": "Murs", "tag": "Kaiju"},
-    {"nombre": "XCriadoenLobosX", "tag": "Toxic"},
-    {"nombre": "Quesito Azul", "tag": "IDK"},
-    {"nombre": "Quesito Gruyere", "tag": "Out"},
-    {"nombre": "Matti5", "tag": "7777"}
-]
-
 QUEUES = {"soloq": 420, "flex": 440, "aram": 450}
 VALOR_TIER = {"CHALLENGER": 9000, "GRANDMASTER": 8000, "MASTER": 7000, "DIAMOND": 6000, "EMERALD": 5000, "PLATINUM": 4000, "GOLD": 3000, "SILVER": 2000, "BRONZE": 1000, "IRON": 0, "UNRANKED": -1000}
 VALOR_RANK = {"I": 400, "II": 300, "III": 200, "IV": 100, "": 0}
@@ -127,6 +115,7 @@ def procesar_jugador(jugador, arg_tz):
 
         d = {
             "nombre": name, "tag": tag, "puuid": puuid, "last_game": last_date,
+            "is_main": jugador.get('is_main', True),
             "soloq": {"tier": "UNRANKED", "rank": "", "lp": 0, "wins": 0, "losses": 0, "wr": 0, "puntos_grafica": 0},
             "flex": {"tier": "UNRANKED", "rank": "", "lp": 0, "wins": 0, "losses": 0, "wr": 0, "puntos_grafica": 0},
             "aram": {"tier": "UNRANKED", "wins": 0, "losses": 0, "wr": 0, "total_partidas": 0, "puntos_grafica": 0},
@@ -169,11 +158,19 @@ def get_leaderboard():
             "ultima_actualizacion": cache_leaderboard["ultima_actualizacion"]
         })
 
+    # NUEVO: OBTENER JUGADORES DESDE SUPABASE
+    try:
+        res_jugadores = supabase.table("jugadores").select("*").execute()
+        lista_jugadores = res_jugadores.data
+    except Exception as e:
+        log_error(f"Error cargando jugadores: {e}")
+        lista_jugadores = []
+
     arg_tz = pytz.timezone('America/Argentina/Buenos_Aires')
 
-    # NUEVO: Bajamos la velocidad de 8 a 2 hilos para que Riot no bloquee la API
     with ThreadPoolExecutor(max_workers=2) as executor:
-        resultados = list(executor.map(lambda jug: procesar_jugador(jug, arg_tz), JUGADORES))
+        # Ahora recorremos la lista de la base de datos
+        resultados = list(executor.map(lambda jug: procesar_jugador(jug, arg_tz), lista_jugadores))
     
     datos_finales = [res for res in resultados if res is not None]
 
@@ -184,6 +181,35 @@ def get_leaderboard():
         "jugadores": datos_finales,
         "ultima_actualizacion": cache_leaderboard["ultima_actualizacion"]
     })
+
+@app.route('/api/jugadores', methods=['POST'])
+def add_jugador():
+    data = request.json
+    nombre = data.get('nombre')
+    tag = data.get('tag')
+    is_main = data.get('is_main', True)
+    
+    if not nombre or not tag:
+        return jsonify({"error": "Faltan datos"}), 400
+        
+    try:
+        # 1. Validar que la cuenta exista en Riot Games antes de guardarla
+        url_acc = f"https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{nombre}/{tag}"
+        res_acc = requests.get(url_acc, headers=headers)
+        if res_acc.status_code != 200:
+            return jsonify({"error": "No se encontró el jugador en Riot. ¿Escribiste bien el Nombre y Tag?"}), 404
+            
+        # 2. Guardar en Supabase
+        supabase.table("jugadores").insert({"nombre": nombre, "tag": tag, "is_main": is_main}).execute()
+        
+        # 3. Limpiar caché para que se actualice la página al instante
+        cache_leaderboard["datos"] = []
+        cache_leaderboard["ultima_actualizacion"] = 0
+        
+        return jsonify({"mensaje": "Jugador agregado con éxito"}), 200
+    except Exception as e:
+        log_error(f"Error agregando jugador: {e}")
+        return jsonify({"error": "La cuenta ya existe o hubo un error en la base de datos."}), 500
 
 @app.route('/api/scouter/<puuid>/<modo>')
 def get_scouter(puuid, modo):
