@@ -23,12 +23,26 @@ function renderizarTabla() {
     tbody.innerHTML = '';
     if (datosGlobales.length === 0) return;
 
+    // En ARAM ordena por total_partidas. En SoloQ/Flex por LPs.
     datosGlobales.sort((a, b) => b[modoActual].puntos_grafica - a[modoActual].puntos_grafica);
 
     datosGlobales.forEach((j, i) => {
         const stats = j[modoActual];
+        const isAram = modoActual === 'aram';
         const color = getComputedStyle(document.documentElement).getPropertyValue(`--color-${stats.tier.toLowerCase()}`).trim() || '#8c52ff';
         const icon = `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-emblem/emblem-${stats.tier.toLowerCase()}.png`;
+
+        // Lógicas visuales para ocultar rango en ARAM y mostrar Partidas
+        const partidasTotales = isAram ? stats.total_partidas : (stats.wins + stats.losses);
+        const textoPJs = isAram ? `<b style="color:white;">${partidasTotales}</b> <span style="font-size:0.8em">PJs (Recientes)</span>` : `<b style="color:white;">${partidasTotales}</b> <span style="font-size:0.8em">PJs</span>`;
+        
+        const rangoHTML = isAram ? 
+            `<div class="lp-text-centered" style="color: var(--amarillo-pro); font-size: 1rem; position: relative;">ARAM KING</div>` : 
+            `<div class="lp-progress-container"><div class="lp-progress-fill" style="width: ${Math.min(stats.lp, 100)}%; background-color: ${color}"></div><div class="lp-text-centered">${stats.tier} ${stats.rank} - ${stats.lp} LP</div></div>`;
+        
+        const wrHTML = isAram ? 
+            `<b>${stats.wr}%</b><br><small style="font-size:0.7em; color:var(--color-subtexto)">Últimos 5 PJs</small>` : 
+            `<b>${stats.wr}%</b><br><small style="font-size:0.7em; color:var(--color-subtexto)">${stats.wins}W / ${stats.losses}L</small>`;
 
         const tr = document.createElement('tr');
         tr.className = 'fila-jugador';
@@ -41,21 +55,16 @@ function renderizarTabla() {
                 <br>
                 <small style="color:gray; font-size:0.7rem; text-transform:uppercase;">ÚLTIMA: ${j.last_game || '---'}</small>
             </td>
-            <td style="color:gray;">
-                <b style="color:white;">${stats.wins + stats.losses}</b> <span style="font-size:0.8em">PJs</span>
-            </td>
+            <td style="color:gray;">${textoPJs}</td>
             <td>
                 <div class="col-rango-completo">
-                    <div class="contenedor-icono-fijo">${stats.tier !== "UNRANKED" ? `<img src="${icon}" class="rank-icon">` : ''}</div>
+                    <div class="contenedor-icono-fijo">${!isAram && stats.tier !== "UNRANKED" ? `<img src="${icon}" class="rank-icon">` : ''}</div>
                     <div class="rank-info-texto rank-${stats.tier}">
-                        <div class="lp-progress-container">
-                            <div class="lp-progress-fill" style="width: ${Math.min(stats.lp, 100)}%; background-color: ${color}"></div>
-                            <div class="lp-text-centered">${modoActual === 'aram' ? 'ARAM KING' : stats.tier + ' ' + stats.rank} - ${stats.lp} LP</div>
-                        </div>
+                        ${rangoHTML}
                     </div>
                 </div>
             </td>
-            <td style="text-align:right"><b>${stats.wr}%</b></td>
+            <td style="text-align:right">${wrHTML}</td>
         `;
         tbody.appendChild(tr);
     });
@@ -64,8 +73,6 @@ function renderizarTabla() {
 function actualizarGrafica() {
     const ctx = document.getElementById('graficoElo').getContext('2d');
     if (miGrafica) miGrafica.destroy();
-    
-    // Evita errores si el backend aún no manda el historial completo
     if (datosGlobales.length === 0 || !datosGlobales[0].historiales) return;
 
     const labels = datosGlobales[0].historiales[modoActual].map(h => h.fecha);
@@ -82,35 +89,61 @@ function actualizarGrafica() {
 function mostrarScouter(j) {
     document.getElementById('seccion-scouter').style.display = 'block';
     const lista = document.getElementById('lista-partidas');
+    const isAram = modoActual === 'aram';
     
-    // 2. MOSTRAMOS ESTADO DE CARGA MIENTRAS RENDER BUSCA LAS PARTIDAS
     document.getElementById('scouter-nombre').textContent = `SCOUTER: ${j.nombre} (Buscando...)`;
     lista.innerHTML = '<div style="color:var(--amarillo-pro); text-align:center; padding: 20px;">Analizando historial en tiempo real...</div>';
 
-    // 3. LE PEDIMOS A RENDER ÚNICAMENTE LAS PARTIDAS DE ESTE JUGADOR
     fetch(`${API_URL}/api/scouter/${j.puuid}/${modoActual}`)
         .then(res => res.json())
         .then(partidas => {
             document.getElementById('scouter-nombre').textContent = `SCOUTER: ${j.nombre}`;
-            lista.innerHTML = ''; // Limpiamos el mensaje de carga
+            lista.innerHTML = ''; 
 
             partidas.forEach(p => {
                 const card = document.createElement('div');
                 card.className = `match-card ${p.win ? 'win' : 'loss'}`;
-                const team1 = p.team1.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/14.8.1/img/champion/${pl.champ}.png"><b>${pl.name}</b></div>`).join('');
-                const team2 = p.team2.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/14.8.1/img/champion/${pl.champ}.png"><b>${pl.name}</b></div>`).join('');
+                const team1 = p.team1.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${pl.champ}.png"><b>${pl.name}</b></div>`).join('');
+                const team2 = p.team2.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${pl.champ}.png"><b>${pl.name}</b></div>`).join('');
+
+                const renderItems = p.items.map(id => {
+                    const url = id > 0 ? `https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/item/${id}.png` : '';
+                    return `<div class="m-item-box">${url ? `<img src="${url}">` : ''}</div>`;
+                }).join('');
+
+                const roleMapping = { 'middle': 'mid', 'jungle': 'jung', 'bottom': 'bot', 'utility': 'support', 'top': 'top' };
+                const pos = p.role ? roleMapping[p.role.toLowerCase()] || 'none' : 'none';
+                const posIcon = pos !== 'none' && !isAram ? `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-positions/position-icon-${pos}.png` : '';
+
+                const fixSum = (s) => String(s).replace('Ignite', 'Dot');
 
                 card.innerHTML = `
-                    <div style="font-size:0.8rem"><b>${p.win?'Victoria':'Derrota'}</b><br>${p.fecha}<br>${p.duracion}</div>
-                    <div style="display:flex; align-items:center; gap:10px">
-                        <img src="https://ddragon.leagueoflegends.com/cdn/14.8.1/img/champion/${p.champ}.png" width="50" style="border-radius:50%">
-                        <div style="font-weight:800">${p.k}/${p.d}/${p.a}</div>
+                    <div class="m-info">
+                        <b style="color:${p.win ? '#2add9c' : '#f25757'}">${p.win ? 'Victoria' : 'Derrota'}</b>
+                        <span style="color: var(--amarillo-pro); font-weight: bold; font-size: 0.75rem;">${p.queue_name}</span><br>
+                        ${p.fecha} • ${p.duracion}
+                        ${!isAram ? `<br><span class="${p.win ? 'lp-gain' : 'lp-loss'}">${p.win ? '+' : '-'}${p.lp_change || 20} LP</span>` : ''}
                     </div>
-                    <div><small>${p.cs} CS</small></div>
-                    <div style="display:grid; grid-template-columns: repeat(4, 25px); gap:2px">
-                        ${p.items.map(id => id > 0 ? `<img src="https://ddragon.leagueoflegends.com/cdn/14.8.1/img/item/${id}.png" width="25">` : '<div style="width:25px; height:25px; background:#101218"></div>').join('')}
+                    <div class="m-champ-block">
+                        <div class="m-champ-img-container">
+                            <img class="main-champ" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${p.champ}.png">
+                            <span class="m-lvl">${p.lvl}</span>
+                            ${posIcon ? `<img src="${posIcon}" class="role-icon">` : ''}
+                        </div>
+                        <div class="m-spells-runes">
+                            <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${p.summoners ? fixSum(p.summoners[0]) : 'SummonerFlash'}.png">
+                            <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${p.summoners ? fixSum(p.summoners[1]) : 'SummonerDot'}.png">
+                        </div>
                     </div>
-                    <div style="display:flex; gap:20px"><div>${team1}</div><div>${team2}</div></div>
+                    <div class="m-stats">
+                        <div class="m-kda">${p.k} / <span style="color:#f25757">${p.d}</span> / ${p.a}</div>
+                        <div class="m-cs">${p.cs} CS</div>
+                    </div>
+                    <div class="m-items">${renderItems}</div>
+                    <div class="m-teams">
+                        <div class="team-col">${team1}</div>
+                        <div class="team-col">${team2}</div>
+                    </div>
                 `;
                 lista.appendChild(card);
             });
@@ -121,7 +154,6 @@ function mostrarScouter(j) {
         });
 }
 
-// 4. INICIO: CARGAMOS SOLO LA TABLA (MÁS RÁPIDO)
 document.getElementById('update-time').textContent = "DESPERTANDO SERVIDOR..."; 
 
 fetch(`${API_URL}/api/leaderboard`)
@@ -129,7 +161,7 @@ fetch(`${API_URL}/api/leaderboard`)
     .then(d => { 
         datosGlobales = d; 
         document.getElementById('update-time').textContent = "LEADERBOARD ONLINE"; 
-        cerrarAviso(); // Si carga bien, quitamos el cartel de peligro
+        cerrarAviso(); 
         cambiarModo('soloq'); 
     })
     .catch(() => {
