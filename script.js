@@ -202,17 +202,17 @@ function actualizarGrafica() {
     const labels = jugadorMasLargo.historiales[modoActual].map(h => h.fecha);
 
     // Acá sacamos el .slice(0, 5) para que dibuje a TODOS
+    // 1. ACHICAR LOS CÍRCULOS
     const datasets = jugadoresConHistorial.map(j => {
-        // Asignamos el color fijo o uno por defecto si entra alguien nuevo
         const colorJugador = COLORES_JUGADORES[j.nombre] || '#ffffff';
         return {
             label: j.nombre,
             data: j.historiales[modoActual].map(h => h.puntos),
             borderColor: colorJugador,
             backgroundColor: colorJugador,
-            borderWidth: 3,
-            pointRadius: 4,
-            pointHoverRadius: 7,
+            borderWidth: 2,       // Línea un poco más fina para que se vea más limpio
+            pointRadius: 2,       // <-- Círculos más chicos en reposo (antes estaba en 4)
+            pointHoverRadius: 5,  // <-- Círculo cuando le pasás el mouse encima
             tension: 0.1
         };
     });
@@ -223,10 +223,13 @@ function actualizarGrafica() {
         options: { 
             responsive: true, 
             maintainAspectRatio: false, 
+            
+            // 2. TOOLTIP INDIVIDUAL
             interaction: {
-                mode: 'index',
-                intersect: false,
+                mode: 'nearest', // <-- Solo interactúa con el punto más cercano al mouse
+                intersect: true, // <-- Tenés que pasar el mouse justo por encima del punto
             },
+            
             scales: {
                 y: {
                     suggestedMin: 1000, 
@@ -239,9 +242,8 @@ function actualizarGrafica() {
             },
             plugins: { 
                 legend: { 
-                    labels: { color: '#9ca3af', usePointStyle: true, boxWidth: 8 } 
+                    labels: { color: '#9ca3af', usePointStyle: true, boxWidth: 6 } 
                 },
-                // NUEVO: Formateamos el Tooltip
                 tooltip: {
                     callbacks: {
                         label: function(context) {
@@ -251,17 +253,19 @@ function actualizarGrafica() {
                         }
                     }
                 },
+                
+                // 3. MOVERSE LIBREMENTE SIN RECUADRO DE ZOOM
                 zoom: {
                     pan: {
                         enabled: true,
-                        mode: 'xy', // <-- AHORA ES LIBRE EN TODAS DIRECCIONES
+                        mode: 'xy', // Movimiento libre para todos lados
                         modifierKey: null, 
                     },
                     zoom: {
-                        wheel: { enabled: true },
-                        drag: { enabled: true }, // Permite seleccionar un área para acercar
-                        pinch: { enabled: true },
-                        mode: 'xy', // <-- ZOOM LIBRE
+                        wheel: { enabled: true }, // Zoom SÓLO con la ruedita del mouse
+                        drag: { enabled: false }, // <-- Apagamos el recuadro de selección
+                        pinch: { enabled: true }, // Permite pellizcar en celulares
+                        mode: 'xy', 
                     }
                 }
             } 
