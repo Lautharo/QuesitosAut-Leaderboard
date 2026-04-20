@@ -6,6 +6,58 @@ let miGrafica = null;
 let LOL_VER = "16.8.1"; 
 let runesData = []; // Variable global para guardar el mapa de runas
 
+// --- COLORES ÚNICOS PARA CADA JUGADOR ---
+const COLORES_JUGADORES = {
+    "AU l Thxgzz": "#FF3366",       // Rosa Neón
+    "Murs": "#33FFCC",              // Cian/Verde agua
+    "AU l Ferry": "#FFCC33",        // Amarillo Dorado
+    "Quesito Gruyere": "#B833FF",   // Violeta
+    "AU l benji": "#3385FF",        // Azul
+    "Quesito Azul": "#00E5FF",      // Celeste brillante
+    "AU l Osiris": "#FF8000",       // Naranja
+    "XCriadoenLobosX": "#33FF33"    // Verde Lima
+};
+
+// --- TRADUCTOR DE PUNTOS A RANGO PARA EL TOOLTIP ---
+function decodificarPuntos(puntos) {
+    if (puntos < 0) return "UNRANKED";
+    
+    const tiers = [
+        { val: 9000, name: "CHALLENGER" }, { val: 8000, name: "GRANDMASTER" },
+        { val: 7000, name: "MASTER" }, { val: 6000, name: "DIAMOND" },
+        { val: 5000, name: "EMERALD" }, { val: 4000, name: "PLATINUM" },
+        { val: 3000, name: "GOLD" }, { val: 2000, name: "SILVER" },
+        { val: 1000, name: "BRONZE" }, { val: 0, name: "IRON" }
+    ];
+    
+    // Encontramos el tier base
+    let t = tiers.find(t => puntos >= t.val) || tiers[9];
+    let resto = puntos - t.val;
+    
+    // Master, Grandmaster y Challenger no tienen divisiones
+    if (t.val >= 7000) {
+        return `${t.name} - ${resto} LP`;
+    }
+    
+    const ranks = [
+        { val: 400, name: "I" }, { val: 300, name: "II" },
+        { val: 200, name: "III" }, { val: 100, name: "IV" }
+    ];
+    
+    // Encontramos la división
+    let r = ranks.find(r => resto >= r.val) || {val: 0, name: "IV"};
+    let lp = resto - r.val;
+    
+    return `${t.name} ${r.name} - ${lp} LP`;
+}
+
+// --- FUNCIÓN DEL BOTÓN RESET ---
+function resetearZoom() {
+    if (miGrafica) {
+        miGrafica.resetZoom();
+    }
+}
+
 const ARAM_TITLES = [
     "ARAM GOD", "ARAM KING", "ARAM PRINCE", "ARAM DUKE", 
     "ARAM KNIGHT", "ARAM SQUIRE", "ARAM PEASANT", "ARAM MINION"
@@ -150,16 +202,20 @@ function actualizarGrafica() {
     const labels = jugadorMasLargo.historiales[modoActual].map(h => h.fecha);
 
     // Acá sacamos el .slice(0, 5) para que dibuje a TODOS
-    const datasets = jugadoresConHistorial.map(j => ({
-        label: j.nombre,
-        data: j.historiales[modoActual].map(h => h.puntos),
-        borderColor: getComputedStyle(document.documentElement).getPropertyValue(`--color-${j[modoActual].tier.toLowerCase()}`).trim() || '#d4b55c',
-        backgroundColor: getComputedStyle(document.documentElement).getPropertyValue(`--color-${j[modoActual].tier.toLowerCase()}`).trim() || '#d4b55c',
-        borderWidth: 3,
-        pointRadius: 4,
-        pointHoverRadius: 7,
-        tension: 0.1 // Líneas un poco más rectas como las de OP.GG
-    }));
+    const datasets = jugadoresConHistorial.map(j => {
+        // Asignamos el color fijo o uno por defecto si entra alguien nuevo
+        const colorJugador = COLORES_JUGADORES[j.nombre] || '#ffffff';
+        return {
+            label: j.nombre,
+            data: j.historiales[modoActual].map(h => h.puntos),
+            borderColor: colorJugador,
+            backgroundColor: colorJugador,
+            borderWidth: 3,
+            pointRadius: 4,
+            pointHoverRadius: 7,
+            tension: 0.1
+        };
+    });
 
     miGrafica = new Chart(ctx, { 
         type: 'line', 
@@ -173,7 +229,6 @@ function actualizarGrafica() {
             },
             scales: {
                 y: {
-                    // Sugerimos un rango, pero el plugin de pan permite salirse
                     suggestedMin: 1000, 
                     suggestedMax: 6000,
                     grid: { color: 'rgba(255, 255, 255, 0.05)' }
@@ -186,20 +241,32 @@ function actualizarGrafica() {
                 legend: { 
                     labels: { color: '#9ca3af', usePointStyle: true, boxWidth: 8 } 
                 },
+                // NUEVO: Formateamos el Tooltip
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const jugador = context.dataset.label;
+                            const rangoFormateado = decodificarPuntos(context.parsed.y);
+                            return `${jugador}: ${rangoFormateado}`;
+                        }
+                    }
+                },
                 zoom: {
                     pan: {
                         enabled: true,
-                        mode: 'y', // Solo permitimos arrastrar arriba/abajo
-                        modifierKey: null, // Se arrastra con click normal
+                        mode: 'xy', // <-- AHORA ES LIBRE EN TODAS DIRECCIONES
+                        modifierKey: null, 
                     },
                     zoom: {
-                        wheel: { enabled: true }, // Permite hacer zoom con la ruedita del mouse
-                        mode: 'y',
+                        wheel: { enabled: true },
+                        drag: { enabled: true }, // Permite seleccionar un área para acercar
+                        pinch: { enabled: true },
+                        mode: 'xy', // <-- ZOOM LIBRE
                     }
                 }
             } 
         },
-        plugins: [fondoLigasPlugin] // Activamos nuestro fondo personalizado
+        plugins: [fondoLigasPlugin]
     });
 }
 

@@ -526,3 +526,25 @@ h1 {
 .rank-UNRANKED {
 	color: var(--color-subtexto);
 }
+
+.btn-reset-zoom {
+	position: absolute;
+	top: 15px;
+	right: 20px;
+	background: #1a202c;
+	color: var(--color-subtexto);
+	border: 1px solid #2d3748;
+	padding: 6px 12px;
+	border-radius: 6px;
+	cursor: pointer;
+	z-index: 100;
+	font-size: 0.75rem;
+	font-weight: bold;
+	transition: all 0.2s;
+}
+
+	.btn-reset-zoom:hover {
+		background: var(--amarillo-pro);
+		color: black;
+		border-color: var(--amarillo-pro);
+	}
