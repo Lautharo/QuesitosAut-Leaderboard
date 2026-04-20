@@ -90,6 +90,15 @@ def procesar_jugador(jugador, arg_tz):
         res_acc = requests.get(url_acc, headers=headers)
         if res_acc.status_code != 200: return None
         puuid = res_acc.json()['puuid']
+        
+        # ------------------------------------------------------------------
+        # NUEVO: Pedimos a Riot los datos de Invocador (para sacar la foto)
+        # ------------------------------------------------------------------
+        res_summoner = requests.get(f"https://la2.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/{puuid}", headers=headers)
+        profile_icon_id = 29 # Si falla, dejamos la rosa por defecto
+        if res_summoner.status_code == 200:
+            profile_icon_id = res_summoner.json().get('profileIconId', 29)
+        # ------------------------------------------------------------------
 
         # NUEVO: Validamos que Riot responda OK (200) antes de leer el JSON
         res_m = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count=1", headers=headers)
