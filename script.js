@@ -4,7 +4,7 @@ let datosGlobales = [];
 let modoActual = 'soloq';
 let miGrafica = null;
 let LOL_VER = "16.8.1"; 
-let runesData = []; // Variable global para guardar el mapa de runas
+let runesData = []; 
 
 const ARAM_TITLES = [
     "ARAM GOD", "ARAM KING", "ARAM PRINCE", "ARAM DUKE", 
@@ -19,13 +19,11 @@ function cambiarModo(modo) {
     modoActual = modo;
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(`btn-${modo}`).classList.add('active');
-    
     if (modo === 'aram') {
         document.getElementById('aram-aviso').style.display = 'block';
     } else {
         document.getElementById('aram-aviso').style.display = 'none';
     }
-
     renderizarTabla();
     actualizarGrafica();
 }
@@ -34,28 +32,21 @@ function renderizarTabla() {
     const tbody = document.getElementById('lista-jugadores-body');
     tbody.innerHTML = '';
     if (datosGlobales.length === 0) return;
-
     datosGlobales.sort((a, b) => b[modoActual].puntos_grafica - a[modoActual].puntos_grafica);
-
     datosGlobales.forEach((j, i) => {
         const stats = j[modoActual];
         const isAram = modoActual === 'aram';
         const color = getComputedStyle(document.documentElement).getPropertyValue(`--color-${stats.tier.toLowerCase()}`).trim() || '#8c52ff';
         const icon = `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-emblem/emblem-${stats.tier.toLowerCase()}.png`;
-
         const partidasTotales = isAram ? stats.total_partidas : (stats.wins + stats.losses);
         const textoPJs = isAram ? `<b style="color:white;">${partidasTotales}</b> <span style="font-size:0.8em">PJs (Season)</span>` : `<b style="color:white;">${partidasTotales}</b> <span style="font-size:0.8em">PJs</span>`;
-        
         const rangoTexto = isAram ? (ARAM_TITLES[i] || "ARAM NOOB") : `${stats.tier} ${stats.rank}`;
-
         const rangoHTML = isAram ? 
             `<div class="lp-text-centered" style="color: var(--amarillo-pro); font-size: 1rem; position: relative;">${rangoTexto}</div>` : 
             `<div class="lp-progress-container"><div class="lp-progress-fill" style="width: ${Math.min(stats.lp, 100)}%; background-color: ${color}"></div><div class="lp-text-centered">${rangoTexto} - ${stats.lp} LP</div></div>`;
-        
         const wrHTML = isAram ? 
             `<b>${stats.wr}%</b><br><small style="font-size:0.7em; color:var(--color-subtexto)">Últimos 5 PJs</small>` : 
             `<b>${stats.wr}%</b><br><small style="font-size:0.7em; color:var(--color-subtexto)">${stats.wins}W / ${stats.losses}L</small>`;
-
         const tr = document.createElement('tr');
         tr.className = 'fila-jugador';
         tr.onclick = () => mostrarScouter(j);
@@ -82,23 +73,70 @@ function renderizarTabla() {
     });
 }
 
+// --- INYECCIÓN: Nueva función de gráfica con Rangos y Colores ---
 function actualizarGrafica() {
     const ctx = document.getElementById('graficoElo').getContext('2d');
     if (miGrafica) miGrafica.destroy();
-    if (datosGlobales.length === 0 || !datosGlobales[0].historiales) return;
+    if (datosGlobales.length === 0) return;
 
-    const labels = datosGlobales[0].historiales[modoActual].map(h => h.fecha);
-    const datasets = datosGlobales.slice(0, 5).map(j => ({
-        label: j.nombre,
-        data: j.historiales[modoActual].map(h => h.puntos),
-        borderColor: getComputedStyle(document.documentElement).getPropertyValue(`--color-${j[modoActual].tier.toLowerCase()}`).trim() || '#d4b55c',
-        tension: 0.3
-    }));
+    const colores = ['#ffce56', '#ffffff', '#2add9c', '#f25757', '#4bcaeb', '#5765f2', '#ff6384', '#9966ff'];
+    let fechasSet = new Set();
+    datosGlobales.forEach(j => {
+        if (j.historiales && j.historiales[modoActual]) {
+            j.historiales[modoActual].forEach(h => fechasSet.add(h.fecha));
+        }
+    });
+    const labels = Array.from(fechasSet).sort();
 
-    miGrafica = new Chart(ctx, { type: 'line', data: { labels, datasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#9ca3af' } } } } });
+    const datasets = datosGlobales.map((j, idx) => {
+        const history = j.historiales ? j.historiales[modoActual] : [];
+        const data = labels.map(label => {
+            const registro = history.find(h => h.fecha === label);
+            return registro ? registro.puntos : null;
+        });
+        return {
+            label: j.nombre,
+            data: data,
+            borderColor: colores[idx % colores.length],
+            backgroundColor: colores[idx % colores.length],
+            tension: 0.3,
+            spanGaps: true,
+            pointRadius: 4
+        };
+    });
+
+    miGrafica = new Chart(ctx, {
+        type: 'line',
+        data: { labels, datasets },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: {
+                        color: '#9ca3af',
+                        callback: function(val) {
+                            if (val >= 2500) return 'C';
+                            if (val >= 2000) return 'GM';
+                            if (val >= 1500) return 'M';
+                            if (val >= 1000) return 'D1';
+                            if (val >= 800) return 'D2';
+                            if (val >= 600) return 'D3';
+                            if (val >= 400) return 'D4';
+                            return val;
+                        }
+                    }
+                },
+                x: { ticks: { color: '#9ca3af' }, grid: { display: false } }
+            },
+            plugins: {
+                legend: { position: 'bottom', labels: { color: '#9ca3af', usePointStyle: true, padding: 15 } }
+            }
+        }
+    });
 }
 
-// Helper para buscar la imagen exacta de la runa
 function getRuneIcon(id) {
     if (!runesData || !runesData.length) return '';
     for (let tree of runesData) {
@@ -116,47 +154,33 @@ function mostrarScouter(j) {
     document.getElementById('seccion-scouter').style.display = 'block';
     const lista = document.getElementById('lista-partidas');
     const isAram = modoActual === 'aram';
-    
     document.getElementById('scouter-nombre').textContent = `SCOUTER: ${j.nombre} (Buscando...)`;
     lista.innerHTML = '<div style="color:var(--amarillo-pro); text-align:center; padding: 20px;">Analizando historial en tiempo real...</div>';
-
     fetch(`${API_URL}/api/scouter/${j.puuid}/${modoActual}`)
         .then(res => res.json())
         .then(partidas => {
             document.getElementById('scouter-nombre').textContent = `SCOUTER: ${j.nombre}`;
             lista.innerHTML = ''; 
-
             partidas.forEach(p => {
                 const card = document.createElement('div');
                 card.className = `match-card ${p.win ? 'win' : 'loss'}`;
                 const team1 = p.team1.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${pl.champ}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'"><b>${pl.name}</b></div>`).join('');
                 const team2 = p.team2.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${pl.champ}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'"><b>${pl.name}</b></div>`).join('');
-
-                // --- 1. Separar los 6 ítems normales del Trinket (7mo ítem) ---
                 const normalItems = p.items.slice(0, 6).map(id => {
                     const url = id > 0 ? `https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/item/${id}.png` : '';
                     return `<div class="m-item-box">${url ? `<img src="${url}">` : ''}</div>`;
                 }).join('');
-
                 const trinketId = p.items[6];
                 const trinketUrl = trinketId > 0 ? `https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/item/${trinketId}.png` : '';
                 const renderTrinket = `<div class="m-trinket-box">${trinketUrl ? `<img src="${trinketUrl}">` : ''}</div>`;
-
-                // --- 2. Links oficiales de OP.GG para los roles ---
                 const roleMapping = { 'middle': 'mid', 'jungle': 'jungle', 'bottom': 'adc', 'utility': 'support', 'top': 'top' };
                 const pos = p.role ? roleMapping[p.role.toLowerCase()] || 'none' : 'none';
                 const posIcon = pos !== 'none' && !isAram ? `https://s-lol-web.op.gg/images/icon/icon-position-${pos}.svg` : '';
-
                 const fixSum = (s) => String(s).replace('Ignite', 'Dot');
-
-                // Generar los íconos de las runas
                 const primaryRuneIcon = getRuneIcon(p.runes ? p.runes[0] : 0);
                 const secondaryRuneIcon = getRuneIcon(p.runes ? p.runes[1] : 0);
-                
                 const r1Html = primaryRuneIcon ? `<img class="m-rune primary" src="${primaryRuneIcon}">` : `<div class="m-rune primary placeholder"></div>`;
                 const r2Html = secondaryRuneIcon ? `<img class="m-rune secondary" src="${secondaryRuneIcon}">` : `<div class="m-rune secondary placeholder"></div>`;
-
-                // --- 3. Lógica para mostrar PL Reales o "Calibrando" ---
                 let lpHtml = '';
                 if (!isAram) {
                     if (p.lp_change === 0) {
@@ -167,7 +191,6 @@ function mostrarScouter(j) {
                         lpHtml = `<br><span class="${lpClass}">${lpSign}${p.lp_change} LP</span>`;
                     }
                 }
-
                 card.innerHTML = `
                     <div class="m-info">
                         <b style="color:${p.win ? '#2add9c' : '#f25757'}">${p.win ? 'Victoria' : 'Derrota'}</b>
@@ -209,13 +232,12 @@ function mostrarScouter(j) {
             });
             document.getElementById('seccion-scouter').scrollIntoView({ behavior: 'smooth' });
         })
-        .catch(err => {
-            lista.innerHTML = '<div style="color:#f25757; text-align:center; padding: 20px;">Error al cargar las partidas. El servidor puede estar despertando.</div>';
+        .catch(() => {
+            lista.innerHTML = '<div style="color:#f25757; text-align:center; padding: 20px;">Error al cargar las partidas.</div>';
         });
 }
 
 document.getElementById('update-time').textContent = "SINCRONIZANDO PARCHE..."; 
-
 fetch("https://ddragon.leagueoflegends.com/api/versions.json")
     .then(res => res.json())
     .then(versions => {
@@ -227,13 +249,10 @@ fetch("https://ddragon.leagueoflegends.com/api/versions.json")
         runesData = data; 
         iniciarLeaderboard();
     })
-    .catch(() => {
-        iniciarLeaderboard();
-    });
+    .catch(() => iniciarLeaderboard());
 
 function iniciarLeaderboard() {
     document.getElementById('update-time').textContent = "DESPERTANDO SERVIDOR..."; 
-    
     fetch(`${API_URL}/api/leaderboard`)
         .then(res => res.json())
         .then(d => { 

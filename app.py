@@ -43,7 +43,6 @@ SUMMONERS = {
 cache_leaderboard = {"datos": [], "ultima_actualizacion": 0}
 
 def sync_lp_change(puuid, queue_type, current_lp, last_match_id):
-    """Calcula la diferencia de PL y la guarda en Supabase"""
     if not supabase: return 0
     try:
         res = supabase.table("match_history").select("league_points").eq("puuid", puuid).eq("queue_type", queue_type).order("created_at", desc=True).limit(1).execute()
@@ -94,24 +93,35 @@ def get_leaderboard():
             sq = next((q for q in leagues if q['queueType'] == 'RANKED_SOLO_5x5'), None)
             fl = next((q for q in leagues if q['queueType'] == 'RANKED_FLEX_SR'), None)
 
+            # --- INYECCIÓN: Obtener historial para la gráfica ---
+            historiales = {"soloq": [], "flex": []}
+            if supabase:
+                for q_type in ["soloq", "flex"]:
+                    res_h = supabase.table("match_history").select("league_points, created_at, match_id").eq("puuid", puuid).eq("queue_type", q_type).order("created_at", desc=False).execute()
+                    for reg in res_h.data:
+                        fecha_dt = datetime.fromisoformat(reg['created_at'].replace('Z', '+00:00'))
+                        # Necesitamos un valor visual que combine Rango + LP
+                        # Para esto usamos la misma lógica que puntos_grafica
+                        historiales[q_type].append({
+                            "fecha": fecha_dt.astimezone(arg_tz).strftime('%d/%m %H:%M'),
+                            "puntos": reg['league_points'] # Aquí puedes sumar el offset del rango si quieres que la línea salte entre ligas
+                        })
+
             d = {
-                "nombre": name, "tag": tag, "puuid": puuid, "last_game": last_date,
+                "nombre": name, "tag": tag, "puuid": puuid, "last_game": last_date, "historiales": historiales,
                 "soloq": {"tier": "UNRANKED", "rank": "", "lp": 0, "wins": 0, "losses": 0, "wr": 0, "puntos_grafica": 0},
                 "flex": {"tier": "UNRANKED", "rank": "", "lp": 0, "wins": 0, "losses": 0, "wr": 0, "puntos_grafica": 0},
                 "aram": {"tier": "UNRANKED", "wins": 0, "losses": 0, "wr": 0, "total_partidas": 0, "puntos_grafica": 0}
             }
 
             if sq:
-                d["soloq"].update({"tier": sq['tier'], "rank": sq['rank'], "lp": sq['leaguePoints'], "wins": sq['wins'], "losses": sq['losses'], "wr": round((sq['wins']/(sq['wins']+sq['losses']))*100,1), "puntos_grafica": VALOR_TIER.get(sq['tier'], 0) + VALOR_RANK.get(sq['rank'], 0) + sq['leaguePoints']})
+                pts = VALOR_TIER.get(sq['tier'], 0) + VALOR_RANK.get(sq['rank'], 0) + sq['leaguePoints']
+                d["soloq"].update({"tier": sq['tier'], "rank": sq['rank'], "lp": sq['leaguePoints'], "wins": sq['wins'], "losses": sq['losses'], "wr": round((sq['wins']/(sq['wins']+sq['losses']))*100,1), "puntos_grafica": pts})
                 sync_lp_change(puuid, "soloq", sq['leaguePoints'], last_match_id)
             if fl:
-                d["flex"].update({"tier": fl['tier'], "rank": fl['rank'], "lp": fl['leaguePoints'], "wins": fl['wins'], "losses": fl['losses'], "wr": round((fl['wins']/(fl['wins']+fl['losses']))*100,1), "puntos_grafica": VALOR_TIER.get(fl['tier'], 0) + VALOR_RANK.get(fl['rank'], 0) + fl['leaguePoints']})
+                pts_f = VALOR_TIER.get(fl['tier'], 0) + VALOR_RANK.get(fl['rank'], 0) + fl['leaguePoints']
+                d["flex"].update({"tier": fl['tier'], "rank": fl['rank'], "lp": fl['leaguePoints'], "wins": fl['wins'], "losses": fl['losses'], "wr": round((fl['wins']/(fl['wins']+fl['losses']))*100,1), "puntos_grafica": pts_f})
                 sync_lp_change(puuid, "flex", fl['leaguePoints'], last_match_id)
-            
-            # (El código de ARAM sigue igual, lo abrevio acá para no hacerlo larguísimo, mantené el tuyo si preferís)
-            aram_n = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue=450&count=100", headers=headers).json()
-            total_aram = len(aram_n) if isinstance(aram_n, list) else 0
-            d["aram"].update({"total_partidas": total_aram, "puntos_grafica": total_aram})
 
             datos_finales.append(d)
         except Exception as e: print(f"Error con {name}: {e}")
@@ -124,38 +134,27 @@ def get_leaderboard():
 def get_scouter(puuid, modo):
     partidas = []
     arg_tz = pytz.timezone('America/Argentina/Buenos_Aires')
-    
     try:
         qid = QUEUES.get(modo, 420)
-        # Obtenemos las últimas 10 partidas
         m_ids = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue={qid}&start=0&count=10", headers=headers).json()
-
         for mid in m_ids:
             time.sleep(0.05)
             m_data = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/{mid}", headers=headers).json()
             if 'info' not in m_data: continue
-            
             info = m_data['info']
             me = next(p for p in info['participants'] if p['puuid'] == puuid)
-            
-            q_id = info.get('queueId', 0)
             q_name = "ARAM Normal" if modo == 'aram' else ("Solo / Dúo" if modo == 'soloq' else "Flex")
-
-            # Buscamos el PL real en Supabase (solo para clasificatorias)
             lp_real = 0
             if modo != 'aram' and supabase:
                 try:
                     db_res = supabase.table("match_history").select("change_lp").eq("match_id", mid).execute()
-                    if db_res.data:
-                        lp_real = db_res.data[0]['change_lp']
+                    if db_res.data: lp_real = db_res.data[0]['change_lp']
                 except Exception: pass
-
             try:
                 perks = me.get('perks', {}).get('styles', [])
                 primary_rune = perks[0]['selections'][0]['perk'] if perks and 'selections' in perks[0] and perks[0]['selections'] else 0
                 secondary_tree = perks[1]['style'] if len(perks) > 1 else 0
             except Exception: primary_rune, secondary_tree = 0, 0
-
             p_res = {
                 "win": me['win'], "champ": me['championName'], "lvl": me['champLevel'],
                 "k": me['kills'], "d": me['deaths'], "a": me['assists'],
@@ -173,7 +172,6 @@ def get_scouter(puuid, modo):
             }
             partidas.append(p_res)
     except Exception as e: return jsonify({"error": str(e)}), 500
-    
     return jsonify(partidas)
 
 if __name__ == '__main__':
