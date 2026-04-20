@@ -91,25 +91,37 @@ def get_historial_db(puuid, queue_type):
         log_error(f"Error cargando historial de gráfica: {e}")
         return []
 
-# --- NUEVA FUNCIÓN PARA PROCESAR JUGADORES EN PARALELO ---
+# --- FUNCIÓN MODIFICADA PARA EVITAR EL BAN DE RIOT ---
 def procesar_jugador(jugador, arg_tz):
     name, tag = jugador['nombre'], jugador['tag']
     try:
+        # NUEVO: Pausa de medio segundo por jugador para no saturar a Riot
+        time.sleep(0.5) 
+        
         url_acc = f"https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{name}/{tag}"
         res_acc = requests.get(url_acc, headers=headers)
         if res_acc.status_code != 200: return None
         puuid = res_acc.json()['puuid']
 
-        m_ids = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count=1", headers=headers).json()
-        last_match_id = m_ids[0] if m_ids else ""
+        # NUEVO: Validamos que Riot responda OK (200) antes de leer el JSON
+        res_m = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count=1", headers=headers)
+        if res_m.status_code != 200: return None 
+        m_ids = res_m.json()
         
+        last_match_id = m_ids[0] if m_ids else ""
         last_date = "---"
+        
         if m_ids:
-            m_info = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/{m_ids[0]}", headers=headers).json()
-            dt_utc = datetime.fromtimestamp(m_info['info']['gameEndTimestamp']/1000, tz=pytz.utc)
-            last_date = dt_utc.astimezone(arg_tz).strftime('%d/%m %H:%M')
+            res_info = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/{m_ids[0]}", headers=headers)
+            if res_info.status_code == 200:
+                m_info = res_info.json()
+                dt_utc = datetime.fromtimestamp(m_info['info']['gameEndTimestamp']/1000, tz=pytz.utc)
+                last_date = dt_utc.astimezone(arg_tz).strftime('%d/%m %H:%M')
 
-        leagues = requests.get(f"https://la2.api.riotgames.com/lol/league/v4/entries/by-puuid/{puuid}", headers=headers).json()
+        res_league = requests.get(f"https://la2.api.riotgames.com/lol/league/v4/entries/by-puuid/{puuid}", headers=headers)
+        if res_league.status_code != 200: return None
+        leagues = res_league.json()
+        
         sq = next((q for q in leagues if q['queueType'] == 'RANKED_SOLO_5x5'), None)
         fl = next((q for q in leagues if q['queueType'] == 'RANKED_FLEX_SR'), None)
 
@@ -118,7 +130,7 @@ def procesar_jugador(jugador, arg_tz):
             "soloq": {"tier": "UNRANKED", "rank": "", "lp": 0, "wins": 0, "losses": 0, "wr": 0, "puntos_grafica": 0},
             "flex": {"tier": "UNRANKED", "rank": "", "lp": 0, "wins": 0, "losses": 0, "wr": 0, "puntos_grafica": 0},
             "aram": {"tier": "UNRANKED", "wins": 0, "losses": 0, "wr": 0, "total_partidas": 0, "puntos_grafica": 0},
-            "historiales": { # <-- ACÁ LE CARGAMOS LA DATA A LA GRÁFICA
+            "historiales": { 
                 "soloq": get_historial_db(puuid, "soloq"),
                 "flex": get_historial_db(puuid, "flex")
             }
@@ -133,10 +145,12 @@ def procesar_jugador(jugador, arg_tz):
             d["flex"].update({"tier": fl['tier'], "rank": fl['rank'], "lp": fl['leaguePoints'], "wins": fl['wins'], "losses": fl['losses'], "wr": round((fl['wins']/(fl['wins']+fl['losses']))*100,1), "puntos_grafica": pts_fl})
             sync_lp_change(puuid, "flex", fl['leaguePoints'], pts_fl, last_match_id)
         
-        # Lógica ARAM (abreviada)
-        aram_n = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue=450&count=100", headers=headers).json()
-        total_aram = len(aram_n) if isinstance(aram_n, list) else 0
-        d["aram"].update({"total_partidas": total_aram, "puntos_grafica": total_aram})
+        # Validación extra en ARAM
+        res_aram = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue=450&count=100", headers=headers)
+        if res_aram.status_code == 200:
+            aram_n = res_aram.json()
+            total_aram = len(aram_n) if isinstance(aram_n, list) else 0
+            d["aram"].update({"total_partidas": total_aram, "puntos_grafica": total_aram})
 
         return d
     except Exception as e:
@@ -149,7 +163,6 @@ def home():
 
 @app.route('/api/leaderboard')
 def get_leaderboard():
-    # Si la caché está activa, enviamos los datos y el tiempo exacto en el que se guardaron
     if time.time() - cache_leaderboard["ultima_actualizacion"] < 300 and cache_leaderboard["datos"]:
         return jsonify({
             "jugadores": cache_leaderboard["datos"],
@@ -158,7 +171,8 @@ def get_leaderboard():
 
     arg_tz = pytz.timezone('America/Argentina/Buenos_Aires')
 
-    with ThreadPoolExecutor(max_workers=8) as executor:
+    # NUEVO: Bajamos la velocidad de 8 a 2 hilos para que Riot no bloquee la API
+    with ThreadPoolExecutor(max_workers=2) as executor:
         resultados = list(executor.map(lambda jug: procesar_jugador(jug, arg_tz), JUGADORES))
     
     datos_finales = [res for res in resultados if res is not None]
@@ -166,7 +180,6 @@ def get_leaderboard():
     cache_leaderboard["datos"] = datos_finales
     cache_leaderboard["ultima_actualizacion"] = time.time()
     
-    # Enviamos los datos frescos y la nueva marca de tiempo
     return jsonify({
         "jugadores": datos_finales,
         "ultima_actualizacion": cache_leaderboard["ultima_actualizacion"]
