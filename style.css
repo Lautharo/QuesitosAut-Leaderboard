@@ -703,3 +703,30 @@ h1 {
 		font-size: 1rem;
 		font-weight: 900;
 	}
+
+/* --- RESUMEN DEL JUGADOR (KDA Y MAESTRÍAS) --- */
+.scouter-stats-container {
+	display: grid;
+	grid-template-columns: 1fr 1.5fr;
+	gap: 15px;
+	margin-bottom: 25px;
+}
+
+.stat-box {
+	background: #1c1f26;
+	padding: 20px;
+	border-radius: 10px;
+	border: 1px solid #2d3748;
+	border-left: 4px solid var(--color-emerald);
+}
+
+.role-badge {
+	display: inline-block;
+	background: #2d3748;
+	padding: 6px 10px;
+	border-radius: 6px;
+	font-size: 0.8rem;
+	margin-right: 8px;
+	color: white;
+	font-weight: bold;
+}

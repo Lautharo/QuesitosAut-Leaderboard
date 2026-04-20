@@ -224,11 +224,20 @@ def add_jugador():
 @app.route('/api/scouter/<puuid>/<modo>')
 def get_scouter(puuid, modo):
     partidas = []
+    maestrias = [] # NUEVA LISTA PARA CAMPEONES
     arg_tz = pytz.timezone('America/Argentina/Buenos_Aires')
     
+    # 1. BUSCAMOS LAS MAESTRÍAS (Top 3)
+    try:
+        res_mast = requests.get(f"https://la2.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}", headers=headers)
+        if res_mast.status_code == 200:
+            maestrias = res_mast.json()[:3]
+    except Exception as e:
+        log_error(f"Error cargando maestrias: {e}")
+
+    # 2. BUSCAMOS LAS PARTIDAS (Igual que antes)
     try:
         qid = QUEUES.get(modo, 420)
-        # Obtenemos las últimas 10 partidas
         m_ids = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue={qid}&start=0&count=10", headers=headers).json()
 
         for mid in m_ids:
@@ -242,16 +251,14 @@ def get_scouter(puuid, modo):
             q_id = info.get('queueId', 0)
             q_name = "ARAM Normal" if modo == 'aram' else ("Solo / Dúo" if modo == 'soloq' else "Flex")
 
-            # Buscamos el PL real en Supabase (solo para clasificatorias)
             lp_real = 0
-            lp_current = 0 # <-- NUEVA VARIABLE
+            lp_current = 0 
             if modo != 'aram' and supabase:
                 try:
-                    # Traemos también los league_points
                     db_res = supabase.table("match_history").select("change_lp, league_points").eq("match_id", mid).eq("puuid", puuid).execute()
                     if db_res.data:
                         lp_real = db_res.data[0]['change_lp']
-                        lp_current = db_res.data[0]['league_points'] # <-- LO GUARDAMOS
+                        lp_current = db_res.data[0]['league_points'] 
                 except Exception: pass
 
             try:
@@ -269,7 +276,7 @@ def get_scouter(puuid, modo):
                 "summoners": [SUMMONERS.get(me.get('summoner1Id'), "SummonerFlash"), SUMMONERS.get(me.get('summoner2Id'), "SummonerFlash")],
                 "runes": [primary_rune, secondary_tree],
                 "lp_change": lp_real,
-                "lp_current": lp_current, # <-- LO AGREGAMOS AL JSON
+                "lp_current": lp_current, 
                 "duracion": f"{info['gameDuration'] // 60}:{info['gameDuration'] % 60:02d}",
                 "fecha": datetime.fromtimestamp(info['gameEndTimestamp']/1000, tz=pytz.utc).astimezone(arg_tz).strftime('%d/%m %H:%M'),
                 "queue_name": q_name,
@@ -279,7 +286,8 @@ def get_scouter(puuid, modo):
             partidas.append(p_res)
     except Exception as e: return jsonify({"error": str(e)}), 500
     
-    return jsonify(partidas)
+    # NUEVO: DEVOLVEMOS UN DICCIONARIO CON AMBAS COSAS
+    return jsonify({"partidas": partidas, "maestrias": maestrias})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))

@@ -342,7 +342,12 @@ function getRuneIcon(id) {
 }
 
 function mostrarScouter(j) {
-    document.getElementById('seccion-scouter').style.display = 'block';
+    const scouterSection = document.getElementById('seccion-scouter');
+    scouterSection.style.display = 'block';
+    
+    // --- 1. SCROLL AUTOMÁTICO INMEDIATO ---
+    scouterSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    
     const lista = document.getElementById('lista-partidas');
     const isAram = modoActual === 'aram';
     
@@ -351,37 +356,93 @@ function mostrarScouter(j) {
 
     fetch(`${API_URL}/api/scouter/${j.puuid}/${modoActual}`)
         .then(res => res.json())
-        .then(partidas => {
+        .then(data => {
             document.getElementById('scouter-nombre').textContent = `SCOUTER: ${j.nombre}`;
             lista.innerHTML = ''; 
+
+            // 2. RECIBIMOS LOS NUEVOS DATOS SEPARADOS
+            const partidas = data.partidas || [];
+            const maestrias = data.maestrias || [];
 
             if (partidas.length === 0) {
                 lista.innerHTML = '<div style="color:gray; text-align:center; padding:20px;">No se encontraron partidas recientes en este modo.</div>';
                 return;
             }
 
+            // 3. CÁLCULO DE ESTADÍSTICAS
+            let tk = 0, td = 0, ta = 0, twins = 0;
+            let rolesCount = {};
+            
+            partidas.forEach(p => {
+                tk += p.k; td += p.d; ta += p.a;
+                if (p.win) twins++;
+                
+                let r = p.role || 'none';
+                if (r !== 'none' && r !== 'ARAM' && !isAram) {
+                    rolesCount[r] = (rolesCount[r] || 0) + 1;
+                }
+            });
+
+            const kdaNum = td === 0 ? "Perfecto" : ((tk + ta) / td).toFixed(2);
+            const wrNum = Math.round((twins / partidas.length) * 100);
+            
+            const roleMapping = { 'middle': 'Mid', 'jungle': 'Jungla', 'bottom': 'ADC', 'utility': 'Support', 'top': 'Top' };
+            const favRoleKey = Object.keys(rolesCount).length > 0 ? Object.keys(rolesCount).reduce((a, b) => rolesCount[a] > rolesCount[b] ? a : b) : null;
+            const favRole = favRoleKey ? roleMapping[favRoleKey.toLowerCase()] : (isAram ? 'ARAM' : 'Polivalente');
+
+            // 4. GENERAR HTML DE MAESTRÍAS
+            let maestriasHtml = maestrias.map(m => `
+                <div style="display:flex; align-items:center; gap:10px;">
+                    <img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/${m.championId}.png" style="width:40px; height:40px; border-radius:50%; border:2px solid var(--amarillo-pro);">
+                    <div>
+                        <b style="color:white; font-size:0.9rem;">Nivel ${m.championLevel}</b><br>
+                        <small style="color:var(--color-subtexto); font-size:0.75rem;">${m.championPoints.toLocaleString()} pts</small>
+                    </div>
+                </div>
+            `).join('');
+
+            // 5. INYECTAR CAJAS DE INFORMACIÓN SUPERIORES
+            lista.innerHTML = `
+                <div class="scouter-stats-container">
+                    <div class="stat-box" style="border-left-color: ${kdaNum >= 3 ? 'var(--color-emerald)' : '#f25757'}">
+                        <span style="color:var(--color-subtexto); font-size:0.8rem; font-weight:bold; text-transform:uppercase;">🔥 Desempeño (Últimas ${partidas.length})</span><br>
+                        <div style="font-size:2rem; font-weight:900; color:white; margin: 5px 0;">${kdaNum} KDA</div>
+                        <span style="color:var(--color-gold); font-size:0.9rem;">${tk} / ${td} / ${ta} en total</span><br>
+                        <div style="margin-top:15px;">
+                            <span class="role-badge" style="background: ${wrNum >= 50 ? 'rgba(42, 221, 156, 0.2)' : 'rgba(242, 87, 87, 0.2)'}; color: ${wrNum >= 50 ? 'var(--color-emerald)' : '#f25757'};">WR: ${wrNum}%</span>
+                            <span class="role-badge">Línea Fav: ${favRole}</span>
+                        </div>
+                    </div>
+                    <div class="stat-box" style="border-left-color: var(--amarillo-pro)">
+                        <span style="color:var(--color-subtexto); font-size:0.8rem; font-weight:bold; text-transform:uppercase;">🏆 Campeones Más Jugados</span>
+                        <div style="display:flex; justify-content:space-between; margin-top:15px; flex-wrap: wrap; gap: 10px;">
+                            ${maestriasHtml || '<span style="color:gray; font-size:0.9rem;">Sin datos de maestría disponibles.</span>'}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            // 6. GENERAR Y RENDERIZAR PARTIDAS (Mismo código de antes)
+            const divPartidas = document.createElement('div');
+            lista.appendChild(divPartidas);
+
             let ultimaFechaVista = "";
             let balanceDelDia = 0;
-            let contenedorDiaActual = null;
 
-            // Procesamos las partidas
             partidas.forEach((p, index) => {
-                const fechaCorta = p.fecha.split(' ')[0]; // Extrae solo el "DD/MM"
+                const fechaCorta = p.fecha.split(' ')[0]; 
 
-                // Si cambiamos de día, primero imprimimos el balance del día anterior (si no es la primera vez)
                 if (ultimaFechaVista !== "" && ultimaFechaVista !== fechaCorta) {
-                    insertarBannerDiario(lista, ultimaFechaVista, balanceDelDia);
-                    balanceDelDia = 0; // Reseteamos para el nuevo día
+                    insertarBannerDiario(divPartidas, ultimaFechaVista, balanceDelDia);
+                    balanceDelDia = 0; 
                 }
 
                 ultimaFechaVista = fechaCorta;
-                balanceDelDia += p.lp_change; // Sumamos (o restamos) los PL de esta partida
+                balanceDelDia += p.lp_change;
 
-                // --- DIBUJO DE LA TARJETA DE PARTIDA (Tu código original) ---
                 const card = document.createElement('div');
                 card.className = `match-card ${p.win ? 'win' : 'loss'}`;
                 
-                // (Mantenemos tu lógica de items, runes, teams, etc.)
                 const team1 = p.team1.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${pl.champ}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'"><b>${pl.name}</b></div>`).join('');
                 const team2 = p.team2.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${pl.champ}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'"><b>${pl.name}</b></div>`).join('');
                 const normalItems = p.items.slice(0, 6).map(id => {
@@ -390,9 +451,11 @@ function mostrarScouter(j) {
                 }).join('');
                 const trinketId = p.items[6];
                 const trinketUrl = trinketId > 0 ? `https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/item/${trinketId}.png` : '';
+                
                 const roleMapping = { 'middle': 'mid', 'jungle': 'jungle', 'bottom': 'adc', 'utility': 'support', 'top': 'top' };
                 const pos = p.role ? roleMapping[p.role.toLowerCase()] || 'none' : 'none';
                 const posIcon = pos !== 'none' && !isAram ? `https://s-lol-web.op.gg/images/icon/icon-position-${pos}.svg` : '';
+                
                 const fixSum = (s) => String(s).replace('Ignite', 'Dot');
                 const primaryRuneIcon = getRuneIcon(p.runes ? p.runes[0] : 0);
                 const secondaryRuneIcon = getRuneIcon(p.runes ? p.runes[1] : 0);
@@ -444,15 +507,12 @@ function mostrarScouter(j) {
                         <div class="team-col">${team2}</div>
                     </div>
                 `;
-                lista.appendChild(card);
+                divPartidas.appendChild(card);
 
-                // Si es la última partida del array, imprimimos el balance de ese último día
                 if (index === partidas.length - 1) {
-                    insertarBannerDiario(lista, fechaCorta, balanceDelDia);
+                    insertarBannerDiario(divPartidas, fechaCorta, balanceDelDia);
                 }
             });
-
-            document.getElementById('seccion-scouter').scrollIntoView({ behavior: 'smooth' });
         })
         .catch(err => {
             lista.innerHTML = '<div style="color:#f25757; text-align:center; padding: 20px;">Error al cargar las partidas.</div>';
