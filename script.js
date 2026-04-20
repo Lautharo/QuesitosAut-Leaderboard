@@ -1,15 +1,33 @@
-const API_URL = "https://quesitos-backend.onrender.com"; 
-
 let datosGlobales = [];
 let modoActual = 'soloq';
 let miGrafica = null;
-let LOL_VER = "16.8.1"; // Versión base, pero ahora se actualiza sola
+let LOL_VER = "14.8.1"; 
 
-// Títulos personalizados para los puestos de ARAM
 const ARAM_TITLES = [
     "ARAM GOD", "ARAM KING", "ARAM PRINCE", "ARAM DUKE", 
     "ARAM KNIGHT", "ARAM SQUIRE", "ARAM PEASANT", "ARAM MINION"
 ];
+
+// --- MAPA DE RUNAS (Traduce los IDs de tu Python a imágenes oficiales) ---
+const RUNES_MAP = {
+    8005: 'Precision/PressTheAttack/PressTheAttack', 8008: 'Precision/LethalTempo/LethalTempoTemp',
+    8021: 'Precision/FleetFootwork/FleetFootwork', 8010: 'Precision/Conqueror/Conqueror',
+    8112: 'Domination/Electrocute/Electrocute', 8124: 'Domination/Predator/Predator',
+    8128: 'Domination/DarkHarvest/DarkHarvest', 9923: 'Domination/HailOfBlades/HailOfBlades',
+    8214: 'Sorcery/SummonAery/SummonAery', 8229: 'Sorcery/ArcaneComet/ArcaneComet',
+    8230: 'Sorcery/PhaseRush/PhaseRush', 8351: 'Inspiration/GlacialAugment/GlacialAugment',
+    8360: 'Inspiration/UnsealedSpellbook/UnsealedSpellbook', 8369: 'Inspiration/FirstStrike/FirstStrike',
+    8437: 'Resolve/GraspOfTheUndying/GraspOfTheUndying', 8439: 'Resolve/VeteranAftershock/VeteranAftershock',
+    8465: 'Resolve/Guardian/Guardian',
+    8000: '7201_Precision', 8100: '7200_Domination', 8200: '7202_Sorcery', 8300: '7203_Whimsy', 8400: '7204_Resolve'
+};
+
+const getRuneIcon = (id) => {
+    if (!id) return '';
+    let path = RUNES_MAP[id];
+    if (path) return `https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/${path}.png`;
+    return `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7200_domination.png`; // Runa genérica si falla
+};
 
 function cerrarAviso() {
     document.getElementById('overlay-mantenimiento').style.display = 'none';
@@ -20,12 +38,8 @@ function cambiarModo(modo) {
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(`btn-${modo}`).classList.add('active');
     
-    // Mostramos u ocultamos el cartel de ARAM
-    if (modo === 'aram') {
-        document.getElementById('aram-aviso').style.display = 'block';
-    } else {
-        document.getElementById('aram-aviso').style.display = 'none';
-    }
+    const avisoAram = document.getElementById('aram-aviso');
+    if (avisoAram) avisoAram.style.display = (modo === 'aram') ? 'block' : 'none';
 
     renderizarTabla();
     actualizarGrafica();
@@ -45,7 +59,7 @@ function renderizarTabla() {
         const icon = `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-emblem/emblem-${stats.tier.toLowerCase()}.png`;
 
         const partidasTotales = isAram ? stats.total_partidas : (stats.wins + stats.losses);
-        const textoPJs = isAram ? `<b style="color:white;">${partidasTotales}</b> <span style="font-size:0.8em">PJs (Season)</span>` : `<b style="color:white;">${partidasTotales}</b> <span style="font-size:0.8em">PJs</span>`;
+        const textoPJs = isAram ? `<b style="color:white;">${partidasTotales || 0}</b> <span style="font-size:0.8em">PJs (Season)</span>` : `<b style="color:white;">${partidasTotales}</b> <span style="font-size:0.8em">PJs</span>`;
         
         const rangoTexto = isAram ? (ARAM_TITLES[i] || "ARAM NOOB") : `${stats.tier} ${stats.rank}`;
 
@@ -54,7 +68,7 @@ function renderizarTabla() {
             `<div class="lp-progress-container"><div class="lp-progress-fill" style="width: ${Math.min(stats.lp, 100)}%; background-color: ${color}"></div><div class="lp-text-centered">${rangoTexto} - ${stats.lp} LP</div></div>`;
         
         const wrHTML = isAram ? 
-            `<b>${stats.wr}%</b><br><small style="font-size:0.7em; color:var(--color-subtexto)">Últimos 5 PJs</small>` : 
+            `<b>${stats.wr || 0}%</b><br><small style="font-size:0.7em; color:var(--color-subtexto)">Últimos 5 PJs</small>` : 
             `<b>${stats.wr}%</b><br><small style="font-size:0.7em; color:var(--color-subtexto)">${stats.wins}W / ${stats.losses}L</small>`;
 
         const tr = document.createElement('tr');
@@ -104,87 +118,108 @@ function mostrarScouter(j) {
     const lista = document.getElementById('lista-partidas');
     const isAram = modoActual === 'aram';
     
-    document.getElementById('scouter-nombre').textContent = `SCOUTER: ${j.nombre} (Buscando...)`;
-    lista.innerHTML = '<div style="color:var(--amarillo-pro); text-align:center; padding: 20px;">Analizando historial en tiempo real...</div>';
+    document.getElementById('scouter-nombre').textContent = `SCOUTER: ${j.nombre}`;
+    lista.innerHTML = ''; 
 
-    fetch(`${API_URL}/api/scouter/${j.puuid}/${modoActual}`)
-        .then(res => res.json())
-        .then(partidas => {
-            document.getElementById('scouter-nombre').textContent = `SCOUTER: ${j.nombre}`;
-            lista.innerHTML = ''; 
+    // Al leer del datos.json, ya tenemos las partidas guardadas para este jugador
+    const partidas = j.partidas[modoActual] || [];
 
-            partidas.forEach(p => {
-                const card = document.createElement('div');
-                card.className = `match-card ${p.win ? 'win' : 'loss'}`;
-                const team1 = p.team1.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${pl.champ}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'"><b>${pl.name}</b></div>`).join('');
-                const team2 = p.team2.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${pl.champ}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'"><b>${pl.name}</b></div>`).join('');
+    if (partidas.length === 0) {
+        lista.innerHTML = '<div style="color:var(--color-subtexto); text-align:center; padding: 20px;">No hay partidas recientes en esta cola.</div>';
+        return;
+    }
 
-                const renderItems = p.items.map(id => {
-                    const url = id > 0 ? `https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/item/${id}.png` : '';
-                    return `<div class="m-item-box">${url ? `<img src="${url}">` : ''}</div>`;
-                }).join('');
+    partidas.forEach(p => {
+        const card = document.createElement('div');
+        card.className = `match-card ${p.win ? 'win' : 'loss'}`;
+        
+        const renderTeam = (team) => team.map(pl => `
+            <div class="player-row ${pl.name === j.nombre ? 'me' : ''}">
+                <img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${pl.champ}.png" onerror="this.src='https://ui-avatars.com/api/?name=${pl.champ}&background=1c1f26&color=d4b55c&size=32&font-size=0.6'">
+                <b>${pl.name}</b>
+            </div>`).join('');
 
-                const roleMapping = { 'middle': 'mid', 'jungle': 'jung', 'bottom': 'bot', 'utility': 'support', 'top': 'top' };
-                const pos = p.role ? roleMapping[p.role.toLowerCase()] || 'none' : 'none';
-                const posIcon = pos !== 'none' && !isAram ? `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-positions/position-icon-${pos}.png` : '';
+        const renderItems = p.items.map(id => {
+            if (id > 0) {
+                return `<div class="m-item-box"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/item/${id}.png" onerror="this.src='https://ddragon.leagueoflegends.com/cdn/13.24.1/img/item/${id}.png'"></div>`;
+            }
+            return `<div class="m-item-box"></div>`;
+        }).join('');
 
-                const fixSum = (s) => String(s).replace('Ignite', 'Dot');
+        // 1. TRADUCTOR DE POSICIÓN (Arreglo definitivo para íconos)
+        const rawRole = p.role ? p.role.toLowerCase() : 'none';
+        const roleMapping = { 'middle': 'mid', 'jungle': 'jungle', 'bottom': 'bottom', 'utility': 'support', 'top': 'top' };
+        const pos = roleMapping[rawRole] || 'none';
+        
+        // Solo muestra el icono si tiene posición válida y NO es ARAM
+        const posIcon = (pos !== 'none' && !isAram) ? `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-positions/position-icon-${pos}.png` : '';
 
-                card.innerHTML = `
-                    <div class="m-info">
-                        <b style="color:${p.win ? '#2add9c' : '#f25757'}">${p.win ? 'Victoria' : 'Derrota'}</b>
-                        <span style="color: var(--amarillo-pro); font-weight: bold; font-size: 0.75rem;">${p.queue_name}</span><br>
-                        ${p.fecha} • ${p.duracion}
-                        ${!isAram ? `<br><span class="${p.win ? 'lp-gain' : 'lp-loss'}">${p.win ? '+' : '-'}${p.lp_change || 20} LP</span>` : ''}
-                    </div>
-                    <div class="m-champ-block">
-                        <div class="m-champ-img-container">
-                            <img class="main-champ" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${p.champ}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'">
-                            <span class="m-lvl">${p.lvl}</span>
-                            ${posIcon ? `<img src="${posIcon}" class="role-icon">` : ''}
-                        </div>
-                        <div class="m-spells-runes">
-                            <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${p.summoners ? fixSum(p.summoners[0]) : 'SummonerFlash'}.png">
-                            <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${p.summoners ? fixSum(p.summoners[1]) : 'SummonerDot'}.png">
-                        </div>
-                    </div>
-                    <div class="m-stats">
-                        <div class="m-kda">${p.k} / <span style="color:#f25757">${p.d}</span> / ${p.a}</div>
-                        <div class="m-cs">${p.cs} CS</div>
-                    </div>
-                    <div class="m-items">${renderItems}</div>
-                    <div class="m-teams">
-                        <div class="team-col">${team1}</div>
-                        <div class="team-col">${team2}</div>
-                    </div>
-                `;
-                lista.appendChild(card);
-            });
-            document.getElementById('seccion-scouter').scrollIntoView({ behavior: 'smooth' });
-        })
-        .catch(err => {
-            lista.innerHTML = '<div style="color:#f25757; text-align:center; padding: 20px;">Error al cargar las partidas. El servidor puede estar despertando.</div>';
-        });
+        // 2. RUNAS Y HECHIZOS (A prueba de balas)
+        const fixSum = (s) => String(s).replace('Ignite', 'Dot');
+        const sum1 = p.summoners && p.summoners[0] ? fixSum(p.summoners[0]) : 'SummonerFlash';
+        const sum2 = p.summoners && p.summoners[1] ? fixSum(p.summoners[1]) : 'SummonerDot';
+
+        const rune1 = p.runas && p.runas.length > 0 ? getRuneIcon(p.runas[0]) : '';
+        const rune2 = p.runas && p.runas.length > 1 ? getRuneIcon(p.runas[1]) : '';
+
+        // Nombre de la cola (SoloQ, Flex o ARAM)
+        const queueName = isAram ? 'ARAM' : (modoActual === 'soloq' ? 'Solo / Dúo' : 'Flex');
+
+        card.innerHTML = `
+            <div class="m-info">
+                <b style="color:${p.win ? '#2add9c' : '#f25757'}">${p.win ? 'Victoria' : 'Derrota'}</b>
+                <span style="color: var(--amarillo-pro); font-weight: bold; font-size: 0.75rem;">${queueName}</span><br>
+                ${p.fecha} • ${p.duracion}
+                ${!isAram ? `<br><span class="${p.win ? 'lp-gain' : 'lp-loss'}">${p.win ? '+' : '-'}${p.lp_change || 20} LP</span>` : ''}
+            </div>
+            <div class="m-champ-block">
+                <div class="m-champ-img-container">
+                    <img class="main-champ" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${p.champ}.png" onerror="this.src='https://ui-avatars.com/api/?name=${p.champ}&background=1c1f26&color=d4b55c&size=64&font-size=0.6'">
+                    <span class="m-lvl">${p.lvl}</span>
+                    ${posIcon ? `<img src="${posIcon}" class="role-icon">` : ''}
+                </div>
+                <div class="m-spells-runes">
+                    <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${sum1}.png">
+                    <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${sum2}.png">
+                </div>
+                <div class="m-spells-runes" style="margin-left: 4px;">
+                     ${rune1 ? `<img class="m-rune" src="${rune1}">` : '<div class="m-rune" style="border:1px solid #333;"></div>'}
+                     ${rune2 ? `<img class="m-rune" src="${rune2}" style="width:16px; height:16px; margin: 0 auto; background:none;">` : '<div class="m-rune" style="width:16px; height:16px; border:1px solid #333; margin:0 auto;"></div>'}
+                </div>
+            </div>
+            <div class="m-stats">
+                <div class="m-kda">${p.k} / <span style="color:#f25757">${p.d}</span> / ${p.a}</div>
+                <div class="m-cs">${p.cs} CS</div>
+            </div>
+            <div class="m-items">${renderItems}</div>
+            <div class="m-teams">
+                <div class="team-col">${renderTeam(p.team1)}</div>
+                <div class="team-col">${renderTeam(p.team2)}</div>
+            </div>
+        `;
+        lista.appendChild(card);
+    });
+    document.getElementById('seccion-scouter').scrollIntoView({ behavior: 'smooth' });
 }
 
-// --- ARRANQUE OPTIMIZADO: BUSCA LA VERSIÓN MÁS NUEVA DE RIOT Y LUEGO CARGA ---
+// --- ARRANQUE OPTIMIZADO: BUSCA LA VERSIÓN MÁS NUEVA DE RIOT Y LUEGO LEE DATOS.JSON ---
 document.getElementById('update-time').textContent = "SINCRONIZANDO PARCHE..."; 
 
 fetch("https://ddragon.leagueoflegends.com/api/versions.json")
     .then(res => res.json())
     .then(versions => {
-        LOL_VER = versions[0]; // Esto siempre agarra el último parche oficial disponible
+        LOL_VER = versions[0]; 
         iniciarLeaderboard();
     })
     .catch(() => {
-        // Si falla Riot, usamos la versión de respaldo y arrancamos igual
         iniciarLeaderboard();
     });
 
 function iniciarLeaderboard() {
-    document.getElementById('update-time').textContent = "DESPERTANDO SERVIDOR..."; 
+    document.getElementById('update-time').textContent = "CARGANDO DATOS..."; 
     
-    fetch(`${API_URL}/api/leaderboard`)
+    // Leemos directo del archivo generado por tu main.py en GitHub
+    fetch('datos.json')
         .then(res => res.json())
         .then(d => { 
             datosGlobales = d; 
@@ -193,6 +228,6 @@ function iniciarLeaderboard() {
             cambiarModo('soloq'); 
         })
         .catch(() => {
-            document.getElementById('update-time').textContent = "SIN DATOS - ESPERA A RENDER";
+            document.getElementById('update-time').textContent = "SIN DATOS - ESPERA AL BOT";
         });
 }
