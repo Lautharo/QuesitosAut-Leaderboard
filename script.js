@@ -426,18 +426,66 @@ fetch("https://ddragon.leagueoflegends.com/api/versions.json")
         iniciarLeaderboard();
     });
 
+let cooldownTimer = null;
+
+// --- SISTEMA DE COOLDOWN DEL BOTÓN ---
+function iniciarCooldown(ultimaAct) {
+    const btn = document.getElementById('btn-actualizar');
+    clearInterval(cooldownTimer);
+    
+    cooldownTimer = setInterval(() => {
+        const ahora = Math.floor(Date.now() / 1000);
+        const pasado = ahora - ultimaAct;
+        const restante = 300 - pasado; // 5 minutos exactos (300 segs)
+        
+        if (restante > 0) {
+            btn.disabled = true;
+            const mins = Math.floor(restante / 60);
+            const secs = restante % 60;
+            btn.textContent = `Actualizar en ${mins}:${secs.toString().padStart(2, '0')}`;
+        } else {
+            btn.disabled = false;
+            btn.textContent = "Actualizar Datos";
+            clearInterval(cooldownTimer);
+        }
+    }, 1000); // Se actualiza cada 1 segundo
+}
+
+function forzarActualizacion() {
+    const btn = document.getElementById('btn-actualizar');
+    btn.disabled = true;
+    btn.textContent = "Actualizando...";
+    
+    // Llamamos de nuevo a la función base para que pida los datos y active la animación
+    iniciarLeaderboard();
+}
+
+// --- FUNCIÓN MODIFICADA PARA LA PANTALLA DE CARGA ---
 function iniciarLeaderboard() {
     document.getElementById('update-time').textContent = "DESPERTANDO SERVIDOR..."; 
+    document.getElementById('pantalla-carga').style.display = 'flex'; // Prende la animación de carga
+    document.getElementById('pantalla-carga').style.opacity = '1';
     
     fetch(`${API_URL}/api/leaderboard`)
         .then(res => res.json())
         .then(d => { 
-            datosGlobales = d; 
+            // OJO ACÁ: Ahora el backend devuelve un objeto con "jugadores" y "ultima_actualizacion"
+            datosGlobales = d.jugadores; 
+            
             document.getElementById('update-time').textContent = "LEADERBOARD ONLINE"; 
             cerrarAviso(); 
-            cambiarModo('soloq'); 
+            
+            // Apaga la pantalla de carga suavemente
+            document.getElementById('pantalla-carga').style.opacity = '0'; 
+            setTimeout(() => document.getElementById('pantalla-carga').style.display = 'none', 500);
+            
+            cambiarModo(modoActual); 
+            
+            // Le pasamos el tiempo exacto en el que el servidor se actualizó para arrancar el reloj
+            iniciarCooldown(d.ultima_actualizacion); 
         })
         .catch(() => {
             document.getElementById('update-time').textContent = "SIN DATOS - ESPERA A RENDER";
+            document.getElementById('pantalla-carga').innerHTML = '<h3 style="color:#f25757">Error al conectar. El servidor está dormido o falló.</h3>';
         });
 }

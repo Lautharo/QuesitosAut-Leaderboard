@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Quesitos Autistas - Leaderboard 2026</title>
-    <link rel="icon" type="image/png" href="https://imgur.com/eTV6BxG">
+    <link rel="icon" type="image/png" href="https://i.imgur.com/eTV6BxG.png">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/hammerjs@2.0.8"></script>
     <script src="https://cdn.jsdelivr.net/npm/chartjs-plugin-zoom"></script>
@@ -31,17 +31,28 @@
             <div class="ultima-actualizacion" id="update-time">ACTUALIZANDO...</div>
         </div>
 
-        <div class="tabs">
-            <button class="tab-btn active" id="btn-soloq" onclick="cambiarModo('soloq')">SOLO / DUO</button>
-            <button class="tab-btn" id="btn-flex" onclick="cambiarModo('flex')">FLEX</button>
-            <button class="tab-btn" id="btn-aram" onclick="cambiarModo('aram')">ARAM</button>
+        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px;">
+            <div class="tabs">
+                <button class="tab-btn active" id="btn-soloq" onclick="cambiarModo('soloq')">SOLO / DUO</button>
+                <button class="tab-btn" id="btn-flex" onclick="cambiarModo('flex')">FLEX</button>
+                <button class="tab-btn" id="btn-aram" onclick="cambiarModo('aram')">ARAM</button>
+            </div>
+
+            <button id="btn-actualizar" class="btn-actualizar" onclick="forzarActualizacion()">Actualizar Datos</button>
         </div>
 
         <div id="aram-aviso" style="display: none; background: rgba(242, 87, 87, 0.15); border-left: 5px solid #f25757; padding: 15px; border-radius: 8px; margin-bottom: 5px; text-align: center; color: white;">
             ⚠️ <b>¡ATENCIÓN!</b> Los datos y clasificaciones de ARAM son temporales/ficticios y el sistema sigue en construcción.
         </div>
 
-        <div class="seccion-principal">
+        <div class="seccion-principal" style="position: relative;">
+
+            <div id="pantalla-carga" class="pantalla-carga">
+                <div class="spinner"></div>
+                <h3 style="color: var(--amarillo-brillante); margin-top: 15px;">CARGANDO DATOS...</h3>
+                <p style="color: var(--color-subtexto); font-size: 0.9rem;">El server puede tardar unos segundos si está despertando.</p>
+            </div>
+
             <div class="contenedor-tabla">
                 <table class="tabla-leaderboard">
                     <thead>

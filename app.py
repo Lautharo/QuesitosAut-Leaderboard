@@ -147,21 +147,28 @@ def home():
 
 @app.route('/api/leaderboard')
 def get_leaderboard():
+    # Si la caché está activa, enviamos los datos y el tiempo exacto en el que se guardaron
     if time.time() - cache_leaderboard["ultima_actualizacion"] < 300 and cache_leaderboard["datos"]:
-        return jsonify(cache_leaderboard["datos"])
+        return jsonify({
+            "jugadores": cache_leaderboard["datos"],
+            "ultima_actualizacion": cache_leaderboard["ultima_actualizacion"]
+        })
 
     arg_tz = pytz.timezone('America/Argentina/Buenos_Aires')
 
     with ThreadPoolExecutor(max_workers=8) as executor:
-        # Le pasamos el arg_tz a la función usando una lambda
         resultados = list(executor.map(lambda jug: procesar_jugador(jug, arg_tz), JUGADORES))
     
-    # Filtramos los None por si alguna request falló
     datos_finales = [res for res in resultados if res is not None]
 
     cache_leaderboard["datos"] = datos_finales
     cache_leaderboard["ultima_actualizacion"] = time.time()
-    return jsonify(datos_finales)
+    
+    # Enviamos los datos frescos y la nueva marca de tiempo
+    return jsonify({
+        "jugadores": datos_finales,
+        "ultima_actualizacion": cache_leaderboard["ultima_actualizacion"]
+    })
 
 @app.route('/api/scouter/<puuid>/<modo>')
 def get_scouter(puuid, modo):
