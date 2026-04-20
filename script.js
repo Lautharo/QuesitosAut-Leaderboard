@@ -156,12 +156,24 @@ function mostrarScouter(j) {
                 const r1Html = primaryRuneIcon ? `<img class="m-rune primary" src="${primaryRuneIcon}">` : `<div class="m-rune primary placeholder"></div>`;
                 const r2Html = secondaryRuneIcon ? `<img class="m-rune secondary" src="${secondaryRuneIcon}">` : `<div class="m-rune secondary placeholder"></div>`;
 
+                // --- 3. Lógica para mostrar PL Reales o "Calibrando" ---
+                let lpHtml = '';
+                if (!isAram) {
+                    if (p.lp_change === 0) {
+                        lpHtml = `<br><span style="color: var(--color-subtexto); font-size: 0.8rem;">Calibrando PL...</span>`;
+                    } else {
+                        const lpSign = p.lp_change > 0 ? '+' : '';
+                        const lpClass = p.lp_change > 0 ? 'lp-gain' : 'lp-loss';
+                        lpHtml = `<br><span class="${lpClass}">${lpSign}${p.lp_change} LP</span>`;
+                    }
+                }
+
                 card.innerHTML = `
                     <div class="m-info">
                         <b style="color:${p.win ? '#2add9c' : '#f25757'}">${p.win ? 'Victoria' : 'Derrota'}</b>
                         <span style="color: var(--amarillo-pro); font-weight: bold; font-size: 0.75rem;">${p.queue_name}</span><br>
                         ${p.fecha} • ${p.duracion}
-                        ${!isAram ? `<br><span class="${p.win ? 'lp-gain' : 'lp-loss'}">${p.win ? '+' : '-'}${p.lp_change || 20} LP</span>` : ''}
+                        ${lpHtml}
                     </div>
                     <div class="m-champ-block">
                         <div class="m-champ-img-container">
