@@ -5,6 +5,8 @@ import os
 import time
 from datetime import datetime
 import pytz
+import sys
+from concurrent.futures import ThreadPoolExecutor
 from supabase import create_client, Client
 
 app = Flask(__name__)
@@ -61,6 +63,88 @@ def sync_lp_change(puuid, queue_type, current_lp, last_match_id):
         print(f"Error sync LP: {e}")
     return 0
 
+def log_error(mensaje):
+    """Fuerza a Render a mostrar el error en consola al instante"""
+    print(f"[ERROR CRÍTICO] {mensaje}", file=sys.stderr, flush=True)
+
+def sync_lp_change(puuid, queue_type, current_lp, last_match_id):
+    if not supabase: return 0
+    try:
+        # ... [Tu lógica original de sync_lp_change] ...
+    except Exception as e:
+        log_error(f"Supabase falló al sincronizar PL de {puuid}: {e}")
+    return 0
+
+def get_historial_db(puuid, queue_type):
+    """Busca el historial de PL en Supabase para la gráfica"""
+    if not supabase: return []
+    try:
+        # Traemos los datos ordenados por fecha ascendente para que la gráfica vaya de izquierda a derecha
+        res = supabase.table("match_history").select("league_points", "created_at").eq("puuid", puuid).eq("queue_type", queue_type).order("created_at", desc=False).execute()
+        
+        historial = []
+        for r in res.data:
+            # Formateamos la fecha a DD/MM para que quede limpia en Chart.js
+            dt = datetime.fromisoformat(r['created_at'].replace('Z', '+00:00'))
+            historial.append({
+                "puntos": r['league_points'],
+                "fecha": dt.astimezone(pytz.timezone('America/Argentina/Buenos_Aires')).strftime('%d/%m')
+            })
+        return historial
+    except Exception as e:
+        log_error(f"Error cargando historial de gráfica: {e}")
+        return []
+
+# --- NUEVA FUNCIÓN PARA PROCESAR JUGADORES EN PARALELO ---
+def procesar_jugador(jugador, arg_tz):
+    name, tag = jugador['nombre'], jugador['tag']
+    try:
+        url_acc = f"https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{name}/{tag}"
+        res_acc = requests.get(url_acc, headers=headers)
+        if res_acc.status_code != 200: return None
+        puuid = res_acc.json()['puuid']
+
+        m_ids = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count=1", headers=headers).json()
+        last_match_id = m_ids[0] if m_ids else ""
+        
+        last_date = "---"
+        if m_ids:
+            m_info = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/{m_ids[0]}", headers=headers).json()
+            dt_utc = datetime.fromtimestamp(m_info['info']['gameEndTimestamp']/1000, tz=pytz.utc)
+            last_date = dt_utc.astimezone(arg_tz).strftime('%d/%m %H:%M')
+
+        leagues = requests.get(f"https://la2.api.riotgames.com/lol/league/v4/entries/by-puuid/{puuid}", headers=headers).json()
+        sq = next((q for q in leagues if q['queueType'] == 'RANKED_SOLO_5x5'), None)
+        fl = next((q for q in leagues if q['queueType'] == 'RANKED_FLEX_SR'), None)
+
+        d = {
+            "nombre": name, "tag": tag, "puuid": puuid, "last_game": last_date,
+            "soloq": {"tier": "UNRANKED", "rank": "", "lp": 0, "wins": 0, "losses": 0, "wr": 0, "puntos_grafica": 0},
+            "flex": {"tier": "UNRANKED", "rank": "", "lp": 0, "wins": 0, "losses": 0, "wr": 0, "puntos_grafica": 0},
+            "aram": {"tier": "UNRANKED", "wins": 0, "losses": 0, "wr": 0, "total_partidas": 0, "puntos_grafica": 0},
+            "historiales": { # <-- ACÁ LE CARGAMOS LA DATA A LA GRÁFICA
+                "soloq": get_historial_db(puuid, "soloq"),
+                "flex": get_historial_db(puuid, "flex")
+            }
+        }
+
+        if sq:
+            d["soloq"].update({"tier": sq['tier'], "rank": sq['rank'], "lp": sq['leaguePoints'], "wins": sq['wins'], "losses": sq['losses'], "wr": round((sq['wins']/(sq['wins']+sq['losses']))*100,1), "puntos_grafica": VALOR_TIER.get(sq['tier'], 0) + VALOR_RANK.get(sq['rank'], 0) + sq['leaguePoints']})
+            sync_lp_change(puuid, "soloq", sq['leaguePoints'], last_match_id)
+        if fl:
+            d["flex"].update({"tier": fl['tier'], "rank": fl['rank'], "lp": fl['leaguePoints'], "wins": fl['wins'], "losses": fl['losses'], "wr": round((fl['wins']/(fl['wins']+fl['losses']))*100,1), "puntos_grafica": VALOR_TIER.get(fl['tier'], 0) + VALOR_RANK.get(fl['rank'], 0) + fl['leaguePoints']})
+            sync_lp_change(puuid, "flex", fl['leaguePoints'], last_match_id)
+        
+        # Lógica ARAM (abreviada)
+        aram_n = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue=450&count=100", headers=headers).json()
+        total_aram = len(aram_n) if isinstance(aram_n, list) else 0
+        d["aram"].update({"total_partidas": total_aram, "puntos_grafica": total_aram})
+
+        return d
+    except Exception as e:
+        log_error(f"Error procesando a {name}: {e}")
+        return None
+
 @app.route('/')
 def home():
     return "API de Quesitos Autistas funcionando (Con Supabase)"
@@ -72,6 +156,10 @@ def get_leaderboard():
 
     datos_finales = []
     arg_tz = pytz.timezone('America/Argentina/Buenos_Aires')
+
+    with ThreadPoolExecutor(max_workers=8) as executor:
+        # Le pasamos el arg_tz a la función usando una lambda
+        resultados = executor.map(lambda jug: procesar_jugador(jug, arg_tz), JUGADORES)
 
     for jugador in JUGADORES:
         name, tag = jugador['nombre'], jugador['tag']
@@ -115,6 +203,8 @@ def get_leaderboard():
 
             datos_finales.append(d)
         except Exception as e: print(f"Error con {name}: {e}")
+    
+    datos_finales = [res for res in resultados if res is not None]
 
     cache_leaderboard["datos"] = datos_finales
     cache_leaderboard["ultima_actualizacion"] = time.time()

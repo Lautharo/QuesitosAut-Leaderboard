@@ -85,17 +85,32 @@ function renderizarTabla() {
 function actualizarGrafica() {
     const ctx = document.getElementById('graficoElo').getContext('2d');
     if (miGrafica) miGrafica.destroy();
-    if (datosGlobales.length === 0 || !datosGlobales[0].historiales) return;
+    
+    // Filtramos a los que sí tengan un historial válido para este modo
+    const jugadoresConHistorial = datosGlobales.filter(j => 
+        j.historiales && j.historiales[modoActual] && j.historiales[modoActual].length > 0
+    );
 
-    const labels = datosGlobales[0].historiales[modoActual].map(h => h.fecha);
-    const datasets = datosGlobales.slice(0, 5).map(j => ({
+    if (jugadoresConHistorial.length === 0) return;
+
+    // Tomamos las fechas del que más partidas tenga para el eje X
+    const jugadorMasLargo = jugadoresConHistorial.reduce((max, j) => 
+        j.historiales[modoActual].length > max.historiales[modoActual].length ? j : max
+    );
+    const labels = jugadorMasLargo.historiales[modoActual].map(h => h.fecha);
+
+    const datasets = jugadoresConHistorial.slice(0, 5).map(j => ({
         label: j.nombre,
         data: j.historiales[modoActual].map(h => h.puntos),
         borderColor: getComputedStyle(document.documentElement).getPropertyValue(`--color-${j[modoActual].tier.toLowerCase()}`).trim() || '#d4b55c',
         tension: 0.3
     }));
 
-    miGrafica = new Chart(ctx, { type: 'line', data: { labels, datasets }, options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#9ca3af' } } } } });
+    miGrafica = new Chart(ctx, { 
+        type: 'line', 
+        data: { labels, datasets }, 
+        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { color: '#9ca3af' } } } } 
+    });
 }
 
 // Helper para buscar la imagen exacta de la runa
