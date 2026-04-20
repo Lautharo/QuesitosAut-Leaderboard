@@ -343,9 +343,9 @@ function getRuneIcon(id) {
 
 function mostrarScouter(j) {
     const scouterSection = document.getElementById('seccion-scouter');
-    scouterSection.style.display = 'block';
+    const panelStats = document.getElementById('panel-estadisticas'); // <--- NUEVO
     
-    // --- 1. SCROLL AUTOMÁTICO INMEDIATO ---
+    scouterSection.style.display = 'block';
     scouterSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     
     const lista = document.getElementById('lista-partidas');
@@ -353,6 +353,8 @@ function mostrarScouter(j) {
     
     document.getElementById('scouter-nombre').textContent = `SCOUTER: ${j.nombre} (Buscando...)`;
     lista.innerHTML = '<div style="color:var(--amarillo-pro); text-align:center; padding: 20px;">Analizando historial en tiempo real...</div>';
+    panelStats.innerHTML = ''; // <--- NUEVO: Limpiamos el panel de arriba
+    panelStats.style.display = 'none';
 
     fetch(`${API_URL}/api/scouter/${j.puuid}/${modoActual}`)
         .then(res => res.json())
@@ -402,27 +404,29 @@ function mostrarScouter(j) {
             `).join('');
 
             // 5. INYECTAR CAJAS DE INFORMACIÓN SUPERIORES
-            lista.innerHTML = `
+            // --- INYECTAR CAJAS DE INFORMACIÓN EN EL PANEL BAJO LA GRÁFICA ---
+            panelStats.innerHTML = `
                 <div class="scouter-stats-container">
                     <div class="stat-box" style="border-left-color: ${kdaNum >= 3 ? 'var(--color-emerald)' : '#f25757'}">
                         <span style="color:var(--color-subtexto); font-size:0.8rem; font-weight:bold; text-transform:uppercase;">🔥 Desempeño (Últimas ${partidas.length})</span><br>
-                        <div style="font-size:2rem; font-weight:900; color:white; margin: 5px 0;">${kdaNum} KDA</div>
-                        <span style="color:var(--color-gold); font-size:0.9rem;">${tk} / ${td} / ${ta} en total</span><br>
-                        <div style="margin-top:15px;">
+                        <div style="font-size:1.8rem; font-weight:900; color:white; margin: 2px 0;">${kdaNum} KDA</div>
+                        <span style="color:var(--color-gold); font-size:0.8rem;">${tk} / ${td} / ${ta} en total</span><br>
+                        <div style="margin-top:10px;">
                             <span class="role-badge" style="background: ${wrNum >= 50 ? 'rgba(42, 221, 156, 0.2)' : 'rgba(242, 87, 87, 0.2)'}; color: ${wrNum >= 50 ? 'var(--color-emerald)' : '#f25757'};">WR: ${wrNum}%</span>
                             <span class="role-badge">Línea Fav: ${favRole}</span>
                         </div>
                     </div>
                     <div class="stat-box" style="border-left-color: var(--amarillo-pro)">
                         <span style="color:var(--color-subtexto); font-size:0.8rem; font-weight:bold; text-transform:uppercase;">🏆 Campeones Más Jugados</span>
-                        <div style="display:flex; justify-content:space-between; margin-top:15px; flex-wrap: wrap; gap: 10px;">
-                            ${maestriasHtml || '<span style="color:gray; font-size:0.9rem;">Sin datos de maestría disponibles.</span>'}
+                        <div style="display:flex; justify-content:space-between; margin-top:10px; flex-wrap: wrap; gap: 5px;">
+                            ${maestriasHtml || '<span style="color:gray; font-size:0.9rem;">Sin datos.</span>'}
                         </div>
                     </div>
                 </div>
             `;
-
-            // 6. GENERAR Y RENDERIZAR PARTIDAS (Mismo código de antes)
+            panelStats.style.display = 'block'; // Lo mostramos
+            
+            // La lista de abajo (Scouter) queda solo para las tarjetas de partidas
             const divPartidas = document.createElement('div');
             lista.appendChild(divPartidas);
 

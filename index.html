@@ -104,9 +104,14 @@
                     <tbody id="lista-jugadores-body"></tbody>
                 </table>
             </div>
-            <div class="contenedor-grafico" style="position: relative;">
-                <button onclick="resetearZoom()" class="btn-reset-zoom">Reset Zoom</button>
-                <canvas id="graficoElo"></canvas>
+            <div class="contenedor-grafico" style="position: relative; display: flex; flex-direction: column;">
+                <div style="flex: 1; min-height: 400px; position: relative;">
+                    <button onclick="resetearZoom()" class="btn-reset-zoom">Reset Zoom</button>
+                    <canvas id="graficoElo"></canvas>
+                </div>
+
+                <div id="panel-estadisticas" style="display: none; margin-top: 20px;">
+                </div>
             </div>
         </div>
 
