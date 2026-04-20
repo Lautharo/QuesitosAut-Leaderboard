@@ -116,6 +116,7 @@ def procesar_jugador(jugador, arg_tz):
         d = {
             "nombre": name, "tag": tag, "puuid": puuid, "last_game": last_date,
             "is_main": jugador.get('is_main', True),
+            "propietario": jugador.get('propietario'),
             "soloq": {"tier": "UNRANKED", "rank": "", "lp": 0, "wins": 0, "losses": 0, "wr": 0, "puntos_grafica": 0},
             "flex": {"tier": "UNRANKED", "rank": "", "lp": 0, "wins": 0, "losses": 0, "wr": 0, "puntos_grafica": 0},
             "aram": {"tier": "UNRANKED", "wins": 0, "losses": 0, "wr": 0, "total_partidas": 0, "puntos_grafica": 0},
@@ -188,24 +189,23 @@ def add_jugador():
     nombre = data.get('nombre')
     tag = data.get('tag')
     is_main = data.get('is_main', True)
-    
+    propietario = data.get('propietario', None) # <--- NUEVO: RECIBE EL DUEÑO
+
     if not nombre or not tag:
         return jsonify({"error": "Faltan datos"}), 400
-        
+
     try:
-        # 1. Validar que la cuenta exista en Riot Games antes de guardarla
         url_acc = f"https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{nombre}/{tag}"
         res_acc = requests.get(url_acc, headers=headers)
         if res_acc.status_code != 200:
             return jsonify({"error": "No se encontró el jugador en Riot. ¿Escribiste bien el Nombre y Tag?"}), 404
-            
-        # 2. Guardar en Supabase
-        supabase.table("jugadores").insert({"nombre": nombre, "tag": tag, "is_main": is_main}).execute()
-        
-        # 3. Limpiar caché para que se actualice la página al instante
+
+        # NUEVO: Guardamos el propietario en la base de datos
+        supabase.table("jugadores").insert({"nombre": nombre, "tag": tag, "is_main": is_main, "propietario": propietario}).execute()
+
         cache_leaderboard["datos"] = []
         cache_leaderboard["ultima_actualizacion"] = 0
-        
+
         return jsonify({"mensaje": "Jugador agregado con éxito"}), 200
     except Exception as e:
         log_error(f"Error agregando jugador: {e}")

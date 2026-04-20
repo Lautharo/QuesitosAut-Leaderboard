@@ -104,12 +104,19 @@ function renderizarTabla() {
     tbody.innerHTML = '';
     if (datosGlobales.length === 0) return;
 
-    // Filtro Smurfs
     const mostrarSmurfs = document.getElementById('filtro-smurf') ? document.getElementById('filtro-smurf').checked : true;
+    const filtroJugador = document.getElementById('filtro-jugador') ? document.getElementById('filtro-jugador').value : 'TODOS';
+
     let jugadoresA_Mostrar = datosGlobales;
     
+    // 1. Filtrar por Smurfs activas/desactivas
     if (!mostrarSmurfs) {
-        jugadoresA_Mostrar = datosGlobales.filter(j => j.is_main);
+        jugadoresA_Mostrar = jugadoresA_Mostrar.filter(j => j.is_main);
+    }
+
+    // 2. Filtrar por dueño específico
+    if (filtroJugador !== 'TODOS') {
+        jugadoresA_Mostrar = jugadoresA_Mostrar.filter(j => j.nombre === filtroJugador || j.propietario === filtroJugador);
     }
 
     jugadoresA_Mostrar.sort((a, b) => b[modoActual].puntos_grafica - a[modoActual].puntos_grafica);
@@ -120,19 +127,6 @@ function renderizarTabla() {
         const color = getComputedStyle(document.documentElement).getPropertyValue(`--color-${stats.tier.toLowerCase()}`).trim() || '#8c52ff';
         const icon = `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-emblem/emblem-${stats.tier.toLowerCase()}.png`;
 
-        const partidasTotales = isAram ? stats.total_partidas : (stats.wins + stats.losses);
-        const textoPJs = isAram ? `<b style="color:white;">${partidasTotales}</b> <span style="font-size:0.8em">PJs (Season)</span>` : `<b style="color:white;">${partidasTotales}</b> <span style="font-size:0.8em">PJs</span>`;
-        
-        const rangoTexto = isAram ? (ARAM_TITLES[i] || "ARAM NOOB") : `${stats.tier} ${stats.rank}`;
-
-        const rangoHTML = isAram ? 
-            `<div class="lp-text-centered" style="color: var(--amarillo-pro); font-size: 1rem; position: relative;">${rangoTexto}</div>` : 
-            `<div class="lp-progress-container"><div class="lp-progress-fill" style="width: ${Math.min(stats.lp, 100)}%; background-color: ${color}"></div><div class="lp-text-centered">${rangoTexto} - ${stats.lp} LP</div></div>`;
-        
-        const wrHTML = isAram ? 
-            `<b>${stats.wr}%</b><br><small style="font-size:0.7em; color:var(--color-subtexto)">Últimos 5 PJs</small>` : 
-            `<b>${stats.wr}%</b><br><small style="font-size:0.7em; color:var(--color-subtexto)">${stats.wins}W / ${stats.losses}L</small>`;
-
         const tr = document.createElement('tr');
         tr.className = 'fila-jugador';
         tr.onclick = () => mostrarScouter(j);
@@ -140,20 +134,21 @@ function renderizarTabla() {
             <td style="color:var(--amarillo-pro); font-weight:800">${i + 1}</td>
             <td>
                 <span style="color:white; font-weight:bold; font-size:1.1rem;">${j.nombre}</span> 
-                <span style="color:gray; font-weight:normal; font-size:0.9rem;">#${j.tag}</span>
-                <br>
+                <span style="color:gray; font-weight:normal; font-size:0.9rem;">#${j.tag}</span><br>
+                ${!j.is_main ? `<small style="color: var(--color-gold); font-size: 0.75rem; font-weight: bold; background: rgba(212, 181, 92, 0.1); padding: 2px 6px; border-radius: 4px; display: inline-block; margin: 2px 0;">Smurf de ${j.propietario}</small><br>` : ''}
                 <small style="color:gray; font-size:0.7rem; text-transform:uppercase;">ÚLTIMA: ${j.last_game || '---'}</small>
             </td>
-            <td style="color:gray;">${textoPJs}</td>
+            <td style="color:gray;"><b>${isAram ? stats.total_partidas : (stats.wins + stats.losses)}</b> <span style="font-size:0.8em">PJs</span></td>
             <td>
                 <div class="col-rango-completo">
                     <div class="contenedor-icono-fijo">${!isAram && stats.tier !== "UNRANKED" ? `<img src="${icon}" class="rank-icon">` : ''}</div>
                     <div class="rank-info-texto rank-${stats.tier}">
-                        ${rangoHTML}
+                        ${isAram ? `<div class="lp-text-centered" style="color: var(--amarillo-pro); font-size: 1rem;">${ARAM_TITLES[i] || "ARAM NOOB"}</div>` : 
+                        `<div class="lp-progress-container"><div class="lp-progress-fill" style="width: ${Math.min(stats.lp, 100)}%; background-color: ${color}"></div><div class="lp-text-centered">${stats.tier} ${stats.rank} - ${stats.lp} LP</div></div>`}
                     </div>
                 </div>
             </td>
-            <td style="text-align:right">${wrHTML}</td>
+            <td style="text-align:right"><b>${stats.wr}%</b><br><small style="color:var(--color-subtexto); font-size:0.7em">${stats.wins}W / ${stats.losses}L</small></td>
         `;
         tbody.appendChild(tr);
     });
@@ -207,29 +202,16 @@ function actualizarGrafica() {
     const ctx = document.getElementById('graficoElo').getContext('2d');
     if (miGrafica) miGrafica.destroy();
     
-    // Auto-parchear a los jugadores nuevos (como Matti) para que salgan en su Día 1
-    const hoy = new Date().toLocaleDateString('es-AR', {day: '2-digit', month: '2-digit'});
-    datosGlobales.forEach(j => {
-        if (j.historiales && j.historiales[modoActual] && j.historiales[modoActual].length === 0 && j[modoActual].tier !== "UNRANKED") {
-            j.historiales[modoActual].push({
-                fecha: hoy,
-                puntos: j[modoActual].puntos_grafica
-            });
-        }
-    });
-
-    // Filtro Smurfs para la Gráfica
     const mostrarSmurfs = document.getElementById('filtro-smurf') ? document.getElementById('filtro-smurf').checked : true;
+    const filtroJugador = document.getElementById('filtro-jugador') ? document.getElementById('filtro-jugador').value : 'TODOS';
+
     let jugadoresA_Mostrar = datosGlobales;
-    if (!mostrarSmurfs) {
-        jugadoresA_Mostrar = datosGlobales.filter(j => j.is_main);
+    if (!mostrarSmurfs) jugadoresA_Mostrar = jugadoresA_Mostrar.filter(j => j.is_main);
+    if (filtroJugador !== 'TODOS') {
+        jugadoresA_Mostrar = jugadoresA_Mostrar.filter(j => j.nombre === filtroJugador || j.propietario === filtroJugador);
     }
 
-    // Filtramos a los que sí tengan historial dentro de la lista seleccionada
-    const jugadoresConHistorial = jugadoresA_Mostrar.filter(j => 
-        j.historiales && j.historiales[modoActual] && j.historiales[modoActual].length > 0
-    );
-
+    const jugadoresConHistorial = jugadoresA_Mostrar.filter(j => j.historiales && j.historiales[modoActual] && j.historiales[modoActual].length > 0);
     if (jugadoresConHistorial.length === 0) return;
 
     const jugadorMasLargo = jugadoresConHistorial.reduce((max, j) => 
@@ -490,6 +472,7 @@ function iniciarLeaderboard() {
             document.getElementById('pantalla-carga').style.opacity = '0'; 
             setTimeout(() => document.getElementById('pantalla-carga').style.display = 'none', 500);
             
+            poblarFiltros();
             cambiarModo(modoActual); 
             
             // Le pasamos el tiempo exacto en el que el servidor se actualizó para arrancar el reloj
@@ -517,6 +500,9 @@ function guardarNuevaCuenta() {
     const nombre = document.getElementById('nuevo-nombre').value.trim();
     const tag = document.getElementById('nuevo-tag').value.trim();
     const isMain = document.getElementById('nuevo-ismain').checked;
+    
+    // NUEVO: Capturamos al dueño si la cuenta no es main
+    const propietario = isMain ? null : document.getElementById('nuevo-propietario').value;
 
     if (!nombre || !tag) {
         alert("¡Epa! Por favor, completá el nombre y el tag.");
@@ -530,7 +516,8 @@ function guardarNuevaCuenta() {
     fetch(`${API_URL}/api/jugadores`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ nombre: nombre, tag: tag, is_main: isMain })
+        // NUEVO: Agregamos el "propietario" al paquete que viaja a Python
+        body: JSON.stringify({ nombre: nombre, tag: tag, is_main: isMain, propietario: propietario })
     })
     .then(res => res.json())
     .then(data => {
@@ -549,4 +536,32 @@ function guardarNuevaCuenta() {
         btn.innerText = "Guardar Jugador";
         btn.disabled = false;
     });
+}
+
+function togglePropietario() {
+    const isMain = document.getElementById('nuevo-ismain').checked;
+    const caja = document.getElementById('caja-propietario');
+    const select = document.getElementById('nuevo-propietario');
+    
+    if (!isMain) {
+        caja.style.display = 'block';
+        select.innerHTML = '';
+        datosGlobales.filter(j => j.is_main).forEach(j => {
+            select.innerHTML += `<option value="${j.nombre}">${j.nombre}</option>`;
+        });
+    } else {
+        caja.style.display = 'none';
+    }
+}
+
+function poblarFiltros() {
+    const select = document.getElementById('filtro-jugador');
+    if (!select) return;
+    const actual = select.value;
+    select.innerHTML = '<option value="TODOS">Todos los Quesitos</option>';
+    
+    datosGlobales.filter(j => j.is_main).forEach(j => {
+        select.innerHTML += `<option value="${j.nombre}">${j.nombre}</option>`;
+    });
+    if (actual !== "TODOS") select.value = actual;
 }
