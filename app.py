@@ -6,6 +6,7 @@ import time
 from datetime import datetime
 import pytz
 import sys
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from supabase import create_client, Client
 
@@ -44,6 +45,8 @@ SUMMONERS = {
 
 cache_leaderboard = {"datos": [], "ultima_actualizacion": 0}
 
+db_lock = threading.Lock()
+
 def log_error(mensaje):
     """Fuerza a Render a mostrar el error en consola al instante"""
     print(f"[ERROR CRÍTICO] {mensaje}", file=sys.stderr, flush=True)
@@ -51,32 +54,33 @@ def log_error(mensaje):
 def sync_lp_change(puuid, queue_type, current_lp, puntos_grafica, last_match_id):
     if not supabase: return 0
     try:
-        res = supabase.table("match_history").select("league_points").eq("puuid", puuid).eq("queue_type", queue_type).order("created_at", desc=True).limit(1).execute()
-        last_lp = res.data[0]['league_points'] if res.data else current_lp
-        diff = current_lp - last_lp
+        with db_lock: # <-- NUEVO: Hace que los hilos entren de a uno
+            res = supabase.table("match_history").select("league_points").eq("puuid", puuid).eq("queue_type", queue_type).order("created_at", desc=True).limit(1).execute()
+            last_lp = res.data[0]['league_points'] if res.data else current_lp
+            diff = current_lp - last_lp
 
-        if diff != 0 or not res.data:
-            supabase.table("match_history").upsert({
-                "puuid": puuid, "queue_type": queue_type,
-                "league_points": current_lp, "puntos_grafica": puntos_grafica, "change_lp": diff,
-                "match_id": last_match_id
-            }, on_conflict="puuid,queue_type,match_id").execute()
+            if diff != 0 or not res.data:
+                supabase.table("match_history").upsert({
+                    "puuid": puuid, "queue_type": queue_type,
+                    "league_points": current_lp, "puntos_grafica": puntos_grafica, "change_lp": diff,
+                    "match_id": last_match_id
+                }, on_conflict="puuid,queue_type,match_id").execute()
             return diff
     except Exception as e:
         log_error(f"Supabase falló al sincronizar PL de {puuid}: {e}")
     return 0
 
 def get_historial_db(puuid, queue_type):
-    """Busca el historial en Supabase para la gráfica (usando el Elo total)"""
     if not supabase: return []
     try:
-        res = supabase.table("match_history").select("puntos_grafica", "created_at").eq("puuid", puuid).eq("queue_type", queue_type).order("created_at", desc=False).execute()
+        with db_lock: # <-- NUEVO: Hace que los hilos entren de a uno
+            res = supabase.table("match_history").select("puntos_grafica", "created_at").eq("puuid", puuid).eq("queue_type", queue_type).order("created_at", desc=False).execute()
         
         historial = []
         for r in res.data:
             dt = datetime.fromisoformat(r['created_at'].replace('Z', '+00:00'))
             historial.append({
-                "puntos": r['puntos_grafica'], # ¡Ahora la gráfica usa el ELO ABSOLUTO!
+                "puntos": r['puntos_grafica'],
                 "fecha": dt.astimezone(pytz.timezone('America/Argentina/Buenos_Aires')).strftime('%d/%m')
             })
         return historial
