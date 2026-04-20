@@ -704,17 +704,16 @@ h1 {
 		font-weight: 900;
 	}
 
-/* --- RESUMEN DEL JUGADOR (DEBAJO DE LA GRÁFICA) --- */
+/* --- RESUMEN DEL JUGADOR (PANEL INDEPENDIENTE) --- */
 .scouter-stats-container {
 	display: flex;
-	flex-direction: column; /* Apiladas una arriba de la otra */
+	flex-direction: column;
 	gap: 15px;
-	width: 100%;
 }
 
 .stat-box {
 	background: #1c1f26;
-	padding: 15px; /* Un poco menos de padding para que no ocupe tanto */
+	padding: 15px;
 	border-radius: 10px;
 	border: 1px solid #2d3748;
 	border-left: 4px solid var(--color-emerald);

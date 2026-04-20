@@ -343,7 +343,7 @@ function getRuneIcon(id) {
 
 function mostrarScouter(j) {
     const scouterSection = document.getElementById('seccion-scouter');
-    const panelStats = document.getElementById('panel-estadisticas'); // <--- NUEVO
+    const panelStats = document.getElementById('panel-estadisticas'); 
     
     scouterSection.style.display = 'block';
     scouterSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
@@ -353,7 +353,7 @@ function mostrarScouter(j) {
     
     document.getElementById('scouter-nombre').textContent = `SCOUTER: ${j.nombre} (Buscando...)`;
     lista.innerHTML = '<div style="color:var(--amarillo-pro); text-align:center; padding: 20px;">Analizando historial en tiempo real...</div>';
-    panelStats.innerHTML = ''; // <--- NUEVO: Limpiamos el panel de arriba
+    panelStats.innerHTML = ''; 
     panelStats.style.display = 'none';
 
     fetch(`${API_URL}/api/scouter/${j.puuid}/${modoActual}`)
@@ -362,7 +362,6 @@ function mostrarScouter(j) {
             document.getElementById('scouter-nombre').textContent = `SCOUTER: ${j.nombre}`;
             lista.innerHTML = ''; 
 
-            // 2. RECIBIMOS LOS NUEVOS DATOS SEPARADOS
             const partidas = data.partidas || [];
             const maestrias = data.maestrias || [];
 
@@ -371,7 +370,6 @@ function mostrarScouter(j) {
                 return;
             }
 
-            // 3. CÁLCULO DE ESTADÍSTICAS
             let tk = 0, td = 0, ta = 0, twins = 0;
             let rolesCount = {};
             
@@ -392,39 +390,64 @@ function mostrarScouter(j) {
             const favRoleKey = Object.keys(rolesCount).length > 0 ? Object.keys(rolesCount).reduce((a, b) => rolesCount[a] > rolesCount[b] ? a : b) : null;
             const favRole = favRoleKey ? roleMapping[favRoleKey.toLowerCase()] : (isAram ? 'ARAM' : 'Polivalente');
 
-            // 4. GENERAR HTML DE MAESTRÍAS
-            let maestriasHtml = maestrias.map(m => `
-                <div style="display:flex; align-items:center; gap:10px;">
-                    <img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/${m.championId}.png" style="width:40px; height:40px; border-radius:50%; border:2px solid var(--amarillo-pro);">
-                    <div>
-                        <b style="color:white; font-size:0.9rem;">Nivel ${m.championLevel}</b><br>
-                        <small style="color:var(--color-subtexto); font-size:0.75rem;">${m.championPoints.toLocaleString()} pts</small>
-                    </div>
-                </div>
-            `).join('');
+            // --- LÓGICA NUEVA: ICONO DE ROL ---
+            const roleIconSvg = favRoleKey && favRoleKey !== 'none' && !isAram 
+                ? `<img src="https://s-lol-web.op.gg/images/icon/icon-position-${favRoleKey.toLowerCase()}.svg" style="width:16px; vertical-align: middle; margin-left: 6px; filter: drop-shadow(0 0 2px rgba(0,0,0,0.8));">` 
+                : '';
 
-            // 5. INYECTAR CAJAS DE INFORMACIÓN SUPERIORES
-            // --- INYECTAR CAJAS DE INFORMACIÓN EN EL PANEL BAJO LA GRÁFICA ---
+            // --- LÓGICA NUEVA: PODIO DE MAESTRÍAS ---
+            let maestriasHtml = '';
+            if (maestrias.length > 0) {
+                const ordenIndices = [1, 0, 2]; 
+                let podioHtml = '';
+                
+                ordenIndices.forEach(idx => {
+                    if (maestrias[idx]) {
+                        const m = maestrias[idx];
+                        const isTop1 = idx === 0;
+                        const size = isTop1 ? '70px' : '50px';
+                        const borderColor = isTop1 ? '#d4b55c' : (idx === 1 ? '#a0a0a0' : '#cd7f32'); 
+                        const orderCSS = isTop1 ? 2 : (idx === 1 ? 1 : 3);
+                        
+                        podioHtml += `
+                            <div style="display:flex; flex-direction:column; align-items:center; margin: 0 10px; order: ${orderCSS};">
+                                <div style="position: relative;">
+                                    <img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/${m.championId}.png" 
+                                         style="width:${size}; height:${size}; border-radius:50%; border:3px solid ${borderColor}; box-shadow: 0 0 15px ${borderColor}40; object-fit: cover;">
+                                    ${isTop1 ? '<div style="position:absolute; top:-10px; left:50%; transform:translateX(-50%); font-size:1.2rem;">👑</div>' : ''}
+                                </div>
+                                <b style="color:white; font-size: ${isTop1 ? '0.9rem' : '0.8rem'}; margin-top: 5px;">Lvl ${m.championLevel}</b>
+                                <small style="color:var(--color-subtexto); font-size:0.7rem;">${(m.championPoints/1000).toFixed(1)}k</small>
+                            </div>
+                        `;
+                    }
+                });
+                maestriasHtml = `<div style="display:flex; justify-content:center; align-items:flex-end; width:100%; padding: 10px 0;">${podioHtml}</div>`;
+            }
+
+            // --- INYECTAR CAJAS EN EL PANEL INDEPENDIENTE (Debajo de la gráfica) ---
             panelStats.innerHTML = `
                 <div class="scouter-stats-container">
                     <div class="stat-box" style="border-left-color: ${kdaNum >= 3 ? 'var(--color-emerald)' : '#f25757'}">
                         <span style="color:var(--color-subtexto); font-size:0.8rem; font-weight:bold; text-transform:uppercase;">🔥 Desempeño (Últimas ${partidas.length})</span><br>
-                        <div style="font-size:1.8rem; font-weight:900; color:white; margin: 2px 0;">${kdaNum} KDA</div>
-                        <span style="color:var(--color-gold); font-size:0.8rem;">${tk} / ${td} / ${ta} en total</span><br>
-                        <div style="margin-top:10px;">
-                            <span class="role-badge" style="background: ${wrNum >= 50 ? 'rgba(42, 221, 156, 0.2)' : 'rgba(242, 87, 87, 0.2)'}; color: ${wrNum >= 50 ? 'var(--color-emerald)' : '#f25757'};">WR: ${wrNum}%</span>
-                            <span class="role-badge">Línea Fav: ${favRole}</span>
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+                            <div>
+                                <div style="font-size:2rem; font-weight:900; color:white; line-height: 1;">${kdaNum} KDA</div>
+                                <span style="color:var(--color-gold); font-size:0.85rem;">${tk} / ${td} / ${ta} en total</span>
+                            </div>
+                            <div style="text-align: right;">
+                                <div class="role-badge" style="background: ${wrNum >= 50 ? 'rgba(42, 221, 156, 0.2)' : 'rgba(242, 87, 87, 0.2)'}; color: ${wrNum >= 50 ? 'var(--color-emerald)' : '#f25757'}; margin-bottom: 5px;">WR: ${wrNum}%</div><br>
+                                <div class="role-badge" style="margin: 0; display: inline-flex; align-items: center;">Línea Fav: ${favRole} ${roleIconSvg}</div>
+                            </div>
                         </div>
                     </div>
                     <div class="stat-box" style="border-left-color: var(--amarillo-pro)">
-                        <span style="color:var(--color-subtexto); font-size:0.8rem; font-weight:bold; text-transform:uppercase;">🏆 Campeones Más Jugados</span>
-                        <div style="display:flex; justify-content:space-between; margin-top:10px; flex-wrap: wrap; gap: 5px;">
-                            ${maestriasHtml || '<span style="color:gray; font-size:0.9rem;">Sin datos.</span>'}
-                        </div>
+                        <span style="color:var(--color-subtexto); font-size:0.8rem; font-weight:bold; text-transform:uppercase; display:block; text-align:center; margin-bottom: 10px;">🏆 Campeones Más Jugados</span>
+                        ${maestriasHtml || '<div style="color:gray; font-size:0.9rem; text-align:center;">Sin datos de maestría.</div>'}
                     </div>
                 </div>
             `;
-            panelStats.style.display = 'block'; // Lo mostramos
+            panelStats.style.display = 'block'; 
             
             // La lista de abajo (Scouter) queda solo para las tarjetas de partidas
             const divPartidas = document.createElement('div');
@@ -456,9 +479,8 @@ function mostrarScouter(j) {
                 const trinketId = p.items[6];
                 const trinketUrl = trinketId > 0 ? `https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/item/${trinketId}.png` : '';
                 
-                const roleMapping = { 'middle': 'mid', 'jungle': 'jungle', 'bottom': 'adc', 'utility': 'support', 'top': 'top' };
                 const pos = p.role ? roleMapping[p.role.toLowerCase()] || 'none' : 'none';
-                const posIcon = pos !== 'none' && !isAram ? `https://s-lol-web.op.gg/images/icon/icon-position-${pos}.svg` : '';
+                const posIcon = pos !== 'none' && !isAram ? `https://s-lol-web.op.gg/images/icon/icon-position-${pos.toLowerCase()}.svg` : '';
                 
                 const fixSum = (s) => String(s).replace('Ignite', 'Dot');
                 const primaryRuneIcon = getRuneIcon(p.runes ? p.runes[0] : 0);
