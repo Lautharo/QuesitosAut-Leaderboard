@@ -238,9 +238,12 @@ function actualizarGrafica() {
         const colorJugador = obtenerColor(j.nombre);
         const data = j.historiales[modoActual].map(h => h.puntos);
 
-        // Alineamos a la derecha: rellenamos con null al principio para que el último punto de todos coincida
+        // --- EL FIX ESTÁ ACÁ ---
+        // Creamos los espacios vacíos para rellenar
         const padding = new Array(maxLength - data.length).fill(null);
-        const dataAlineada = padding.concat(data);
+        
+        // Sumamos los datos PRIMERO y el espacio vacío AL FINAL (antes estaba al revés)
+        const dataAlineada = data.concat(padding);
 
         return {
             label: j.nombre,
@@ -251,7 +254,7 @@ function actualizarGrafica() {
             pointRadius: 3,       
             pointHoverRadius: 6,  
             tension: 0.1,
-            spanGaps: true // Fundamental: Conecta la línea aunque haya nulls en el medio
+            spanGaps: true 
         };
     });
 
