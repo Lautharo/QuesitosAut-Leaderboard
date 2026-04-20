@@ -1,4 +1,4 @@
-const API_URL = "https://quesitos-backend.onrender.com"; 
+const API_URL = "https://quesitos-backend.onrender.com"; // SIN la barra al final
 
 let datosGlobales = [];
 let modoActual = 'soloq';
@@ -41,7 +41,7 @@ const getRuneIcon = (id) => {
     if (!id) return '';
     let path = RUNES_MAP[id];
     if (path) return `https://ddragon.leagueoflegends.com/cdn/img/perk-images/Styles/${path}.png`;
-    return `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7200_domination.png`; // Fallback
+    return `https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/perk-images/styles/7200_domination.png`;
 };
 
 function cerrarAviso() {
@@ -137,12 +137,15 @@ function mostrarScouter(j) {
     lista.innerHTML = '<div style="color:var(--amarillo-pro); text-align:center; padding: 20px;">Analizando historial en tiempo real...</div>';
 
     fetch(`${API_URL}/api/scouter/${j.puuid}/${modoActual}`)
-        .then(res => res.json())
+        .then(res => {
+            if (!res.ok) throw new Error(`El servidor devolvió error ${res.status}`);
+            return res.json();
+        })
         .then(partidas => {
-            // ESCUDO ANTICRASH: Si el servidor falla y no manda lista, mostramos el error sin romper la web
+            // Escudo Anti-Crash para el backend
             if (!Array.isArray(partidas)) {
                 console.error("Error del backend:", partidas);
-                lista.innerHTML = `<div style="color:#f25757; text-align:center; padding: 20px;">Error obteniendo partidas: ${partidas.error || 'Datos no disponibles. Asegurate que tu app.py en Render esté actualizado.'}</div>`;
+                lista.innerHTML = `<div style="color:#f25757; text-align:center; padding: 20px;">Error obteniendo partidas: ${partidas.error || 'Datos no disponibles.'}</div>`;
                 document.getElementById('scouter-nombre').textContent = `SCOUTER: ${j.nombre}`;
                 return;
             }
@@ -172,12 +175,12 @@ function mostrarScouter(j) {
                     return `<div class="m-item-box"></div>`;
                 }).join('');
 
-                // MAPEO EXACTO DE POSICIONES (Arreglo icono Mid)
-                const roleMapping = { 'middle': 'mid', 'jungle': 'jungle', 'bottom': 'bottom', 'utility': 'support', 'top': 'top' };
+                // MAPEO EXACTO DE POSICIONES (Arreglado en PNG Oficial)
+                const roleMapping = { 'middle': 'mid', 'jungle': 'jungle', 'bottom': 'bot', 'utility': 'support', 'top': 'top' };
                 const pos = p.role ? roleMapping[p.role.toLowerCase()] || 'none' : 'none';
                 const posIcon = pos !== 'none' && !isAram ? `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-positions/position-icon-${pos}.png` : '';
 
-                // Obtención segura de Runas (por si Python no las envía, no crashea)
+                // Runas y Hechizos Asegurados
                 const rune1 = p.runas && p.runas.length > 0 ? getRuneIcon(p.runas[0]) : '';
                 const rune2 = p.runas && p.runas.length > 1 ? getRuneIcon(p.runas[1]) : '';
 
@@ -193,7 +196,7 @@ function mostrarScouter(j) {
                     </div>
                     <div class="m-champ-block">
                         <div class="m-champ-img-container">
-                            <img class="main-champ" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${p.champ}.png" onerror="this.src='https://ui-avatars.com/api/?name=${p.champ}&background=1c1f26&color=d4b55c&size=64&font-size=0.6'">
+                            <img class="main-champ" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${p.champ}.png" onerror="this.src='https://ui-avatars.com/api/?name=${pl.champ}&background=1c1f26&color=d4b55c&size=64&font-size=0.6'">
                             <span class="m-lvl">${p.lvl}</span>
                             ${posIcon ? `<img src="${posIcon}" class="role-icon">` : ''}
                         </div>
@@ -221,7 +224,11 @@ function mostrarScouter(j) {
             document.getElementById('seccion-scouter').scrollIntoView({ behavior: 'smooth' });
         })
         .catch(err => {
-            lista.innerHTML = '<div style="color:#f25757; text-align:center; padding: 20px;">Fallo de conexión. El servidor de Render debe estar apagado o cargando.</div>';
+            console.error("Error JS/Red:", err);
+            lista.innerHTML = `<div style="color:#f25757; text-align:center; padding: 20px;">
+                <b>Error: ${err.message}</b><br>
+                <small style="color:#aaa;">Si dice "Failed to fetch", renová tu API Key de Riot en Render o esperá a que el servidor despierte.</small>
+            </div>`;
         });
 }
 
