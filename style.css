@@ -730,3 +730,40 @@ h1 {
 	color: white;
 	font-weight: bold;
 }
+/* --- TOGGLE CIRCULAR NEÓN PARA SMURFS --- */
+.toggle-smurf-label {
+    color: var(--color-subtexto);
+    font-size: 0.85rem;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    user-select: none; /* Evita que el texto se seleccione por error al hacer clic */
+    transition: color 0.3s;
+}
+
+.toggle-smurf-label input[type="checkbox"] {
+    display: none; /* Ocultamos el checkbox nativo cuadrado */
+}
+
+.glowing-circle {
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background-color: #1a202c; /* Color apagado */
+    border: 2px solid #2d3748;
+    transition: all 0.3s ease;
+}
+
+/* Efecto cuando está Activado (checked) */
+.toggle-smurf-label input[type="checkbox"]:checked ~ .glowing-circle {
+    background-color: #00E5FF; /* Azul Cyan brillante */
+    border-color: #00E5FF;
+    box-shadow: 0 0 8px #00E5FF, 0 0 15px rgba(0, 229, 255, 0.5); /* Efecto resplandor */
+}
+
+/* Hacemos que el texto resalte un poco más cuando está activado */
+.toggle-smurf-label input[type="checkbox"]:checked ~ .texto-smurf {
+    color: #ffffff;
+    font-weight: 500;
+}

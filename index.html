@@ -43,9 +43,10 @@
                     <option value="TODOS">Todos los Quesitos</option>
                 </select>
 
-                <label style="color: var(--color-subtexto); font-size: 0.85rem; display: flex; align-items: center; gap: 5px; cursor: pointer;">
+                <label class="toggle-smurf-label">
                     <input type="checkbox" id="filtro-smurf" checked onchange="renderizarTabla(); actualizarGrafica();">
-                    Mostrar Smurfs
+                    <span class="glowing-circle"></span>
+                    <span class="texto-smurf">Mostrar Smurfs</span>
                 </label>
 
                 <button class="btn-actualizar" style="color: var(--color-gold); border-color: var(--color-gold); min-width: auto;" onclick="abrirModal()">+ Añadir</button>
