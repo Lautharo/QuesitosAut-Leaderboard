@@ -279,20 +279,36 @@ def get_scouter(puuid, modo):
         log_error(f"Error cargando maestrias: {e}")
 
     # 2. BUSCAMOS LAS PARTIDAS (Igual que antes)
+    # 2. BUSCAMOS LAS PARTIDAS
     try:
-        qid = QUEUES.get(modo, 420)
-        m_ids = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue={qid}&start=0&count=10", headers=headers).json()
+        # Si es ARAM, pedimos las ID de la cola Normal (450) y la Kaos (1130)
+        qids = [450, 1130] if modo == 'aram' else [QUEUES.get(modo, 420)]
+        m_ids = []
+        for qid in qids:
+            res_ids = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue={qid}&start=0&count=10", headers=headers)
+            if res_ids.status_code == 200:
+                m_ids.extend(res_ids.json())
 
+        partidas_temp = []
         for mid in m_ids:
             time.sleep(0.05)
-            m_data = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/{mid}", headers=headers).json()
+            res_match = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/{mid}", headers=headers)
+            if res_match.status_code != 200: continue
+            m_data = res_match.json()
             if 'info' not in m_data: continue
             
             info = m_data['info']
             me = next(p for p in info['participants'] if p['puuid'] == puuid)
             
             q_id = info.get('queueId', 0)
-            q_name = "ARAM Normal" if modo == 'aram' else ("Solo / Dúo" if modo == 'soloq' else "Flex")
+            if q_id == 1130:
+                q_name = "ARAM Kaos"
+            elif q_id == 450:
+                q_name = "ARAM Normal"
+            elif modo == 'soloq':
+                q_name = "Solo / Dúo"
+            else:
+                q_name = "Flex"
 
             lp_real = 0
             lp_current = 0 
@@ -324,9 +340,15 @@ def get_scouter(puuid, modo):
                 "fecha": datetime.fromtimestamp(info['gameEndTimestamp']/1000, tz=pytz.utc).astimezone(arg_tz).strftime('%d/%m %H:%M'),
                 "queue_name": q_name,
                 "team1": [{"name": p['riotIdGameName'], "champ": p['championName']} for p in info['participants'][:5]],
-                "team2": [{"name": p['riotIdGameName'], "champ": p['championName']} for p in info['participants'][5:]]
+                "team2": [{"name": p['riotIdGameName'], "champ": p['championName']} for p in info['participants'][5:]],
+                "timestamp_sort": info['gameEndTimestamp'] # Lo usamos para acomodar la lista cronológicamente
             }
-            partidas.append(p_res)
+            partidas_temp.append(p_res)
+            
+        # Acomodamos todas juntas de la más nueva a la más vieja, y cortamos en 10
+        partidas_temp.sort(key=lambda x: x["timestamp_sort"], reverse=True)
+        partidas = partidas_temp[:10]
+        
     except Exception as e: return jsonify({"error": str(e)}), 500
     
     # NUEVO: DEVOLVEMOS UN DICCIONARIO CON AMBAS COSAS
