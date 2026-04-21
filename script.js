@@ -96,9 +96,21 @@ function cambiarModo(modo) {
         document.getElementById('aram-aviso').style.display = 'none';
     }
 
-    // NUEVO: Oculta el Scouter y deselecciona al cambiar de pestaña
+    // Oculta el Scouter y deselecciona al cambiar de pestaña
     jugadorSeleccionado = null;
     document.getElementById('seccion-scouter').style.display = 'none';
+
+    // NUEVO: Resetear el panel de estadísticas al estado por defecto
+    const panelStats = document.getElementById('panel-estadisticas');
+    if (panelStats) {
+        panelStats.innerHTML = `
+            <div style="color: var(--color-subtexto); text-align: center; width: 100%;">
+                <span style="font-size: 2rem;">👆</span><br>
+                <b style="font-size: 1.1rem; color: white;">Seleccioná a un Quesito</b><br>
+                para ver su Desempeño y Maestrías
+            </div>
+        `;
+    }
 
     renderizarTabla();
     actualizarGrafica();
