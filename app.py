@@ -177,11 +177,15 @@ def procesar_jugador(jugador, arg_tz):
             sync_lp_change(puuid, "flex", fl['leaguePoints'], pts_fl, last_match_id)
         
         # Validación extra en ARAM
-        res_aram = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue=450&count=100", headers=headers)
-        if res_aram.status_code == 200:
-            aram_n = res_aram.json()
-            total_aram = len(aram_n) if isinstance(aram_n, list) else 0
-            d["aram"].update({"total_partidas": total_aram, "puntos_grafica": total_aram})
+        # --- FIX TOTAL ARAMS (2026 + KAOS) ---
+        total_aram = 0
+        for qid in [450, 1130]:
+            res_aram = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue={qid}&startTime=1767225600&count=100", headers=headers)
+            if res_aram.status_code == 200:
+                aram_n = res_aram.json()
+                total_aram += len(aram_n) if isinstance(aram_n, list) else 0
+
+        d["aram"].update({"total_partidas": total_aram, "puntos_grafica": total_aram})
 
         return d
     except Exception as e:
@@ -282,10 +286,11 @@ def get_scouter(puuid, modo):
     # 2. BUSCAMOS LAS PARTIDAS
     try:
         # Si es ARAM, pedimos las ID de la cola Normal (450) y la Kaos (1130)
+        # --- FIX SCOUTER ARAMS (2026 + KAOS) ---
         qids = [450, 1130] if modo == 'aram' else [QUEUES.get(modo, 420)]
         m_ids = []
         for qid in qids:
-            res_ids = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue={qid}&start=0&count=10", headers=headers)
+            res_ids = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue={qid}&startTime=1767225600&start=0&count=10", headers=headers)
             if res_ids.status_code == 200:
                 m_ids.extend(res_ids.json())
 
