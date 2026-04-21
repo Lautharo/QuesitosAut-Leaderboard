@@ -81,21 +81,52 @@ def get_historial_db(puuid, queue_type):
 
 # --- FUNCIÓN MODIFICADA PARA EVITAR EL BAN DE RIOT ---
 def procesar_jugador(jugador, arg_tz):
-    name, tag = jugador['nombre'], jugador['tag']
+    db_id = jugador.get('id')
+    name_db, tag_db = jugador['nombre'], jugador['tag']
+    puuid_db = jugador.get('puuid')
+    
     try:
-        # NUEVO: Pausa de medio segundo por jugador para no saturar a Riot
+        # Pausa de medio segundo por jugador para no saturar a Riot
         time.sleep(0.5) 
         
-        url_acc = f"https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{name}/{tag}"
-        res_acc = requests.get(url_acc, headers=headers)
-        if res_acc.status_code != 200: return None
-        puuid = res_acc.json()['puuid']
-        
+        # --- LÓGICA ANTI-CAMBIO DE NOMBRE ---
+        if puuid_db:
+            # Si ya tenemos su PUUID, lo buscamos por código (inmune a cambios)
+            url_acc = f"https://americas.api.riotgames.com/riot/account/v1/accounts/by-puuid/{puuid_db}"
+            res_acc = requests.get(url_acc, headers=headers)
+            if res_acc.status_code != 200: return None
+            acc_data = res_acc.json()
+            
+            current_name = acc_data.get('gameName', name_db)
+            current_tag = acc_data.get('tagLine', tag_db)
+            puuid = puuid_db
+            
+            # Si el nombre cambió en el juego, lo auto-actualizamos en Supabase
+            if current_name != name_db or current_tag != tag_db:
+                if supabase and db_id:
+                    supabase.table("jugadores").update({"nombre": current_name, "tag": current_tag}).eq("id", db_id).execute()
+                name_db, tag_db = current_name, current_tag
+        else:
+            # Sistema viejo: Buscamos por nombre (para los que ya estaban guardados)
+            url_acc = f"https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{name_db}/{tag_db}"
+            res_acc = requests.get(url_acc, headers=headers)
+            if res_acc.status_code != 200: return None
+            acc_data = res_acc.json()
+            
+            puuid = acc_data['puuid']
+            current_name = acc_data.get('gameName', name_db)
+            current_tag = acc_data.get('tagLine', tag_db)
+            
+            # Le guardamos el PUUID para que sea inmune de ahora en adelante
+            if supabase and db_id:
+                supabase.table("jugadores").update({"puuid": puuid, "nombre": current_name, "tag": current_tag}).eq("id", db_id).execute()
+            name_db, tag_db = current_name, current_tag
+            
         # ------------------------------------------------------------------
-        # NUEVO: Pedimos a Riot los datos de Invocador (para sacar la foto)
+        # Pedimos a Riot los datos de Invocador (para sacar la foto)
         # ------------------------------------------------------------------
         res_summoner = requests.get(f"https://la2.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/{puuid}", headers=headers)
-        profile_icon_id = 29 # Si falla, dejamos la rosa por defecto
+        profile_icon_id = 29 
         if res_summoner.status_code == 200:
             profile_icon_id = res_summoner.json().get('profileIconId', 29)
         # ------------------------------------------------------------------
@@ -123,7 +154,7 @@ def procesar_jugador(jugador, arg_tz):
         fl = next((q for q in leagues if q['queueType'] == 'RANKED_FLEX_SR'), None)
 
         d = {
-            "nombre": name, "tag": tag, "puuid": puuid, "last_game": last_date,
+            "nombre": name_db, "tag": tag_db, "puuid": puuid, "last_game": last_date,
             "profileIconId": profile_icon_id,
             "is_main": jugador.get('is_main', True),
             "propietario": jugador.get('propietario'),
@@ -199,7 +230,7 @@ def add_jugador():
     nombre = data.get('nombre')
     tag = data.get('tag')
     is_main = data.get('is_main', True)
-    propietario = data.get('propietario', None) # <--- NUEVO: RECIBE EL DUEÑO
+    propietario = data.get('propietario', None) 
 
     if not nombre or not tag:
         return jsonify({"error": "Faltan datos"}), 400
@@ -210,8 +241,20 @@ def add_jugador():
         if res_acc.status_code != 200:
             return jsonify({"error": "No se encontró el jugador en Riot. ¿Escribiste bien el Nombre y Tag?"}), 404
 
-        # NUEVO: Guardamos el propietario en la base de datos
-        supabase.table("jugadores").insert({"nombre": nombre, "tag": tag, "is_main": is_main, "propietario": propietario}).execute()
+        # NUEVO: Sacamos el PUUID y el nombre real directo desde Riot
+        acc_data = res_acc.json()
+        puuid_real = acc_data['puuid']
+        nombre_real = acc_data.get('gameName', nombre)
+        tag_real = acc_data.get('tagLine', tag)
+
+        # NUEVO: Guardamos todo junto en la tabla
+        supabase.table("jugadores").insert({
+            "nombre": nombre_real, 
+            "tag": tag_real, 
+            "is_main": is_main, 
+            "propietario": propietario, 
+            "puuid": puuid_real
+        }).execute()
 
         cache_leaderboard["datos"] = []
         cache_leaderboard["ultima_actualizacion"] = 0
