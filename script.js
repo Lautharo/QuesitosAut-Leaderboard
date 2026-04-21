@@ -371,7 +371,6 @@ function mostrarScouter(j) {
     document.getElementById('scouter-nombre').textContent = `SCOUTER: ${j.nombre} (Buscando...)`;
     lista.innerHTML = '<div style="color:var(--amarillo-pro); text-align:center; padding: 20px;">Analizando historial en tiempo real...</div>';
     
-    // NUEVO: En vez de ocultar el panel, le ponemos un texto de carga
     panelStats.innerHTML = '<div style="color:var(--amarillo-pro); text-align:center; width: 100%;">Cargando datos del jugador...</div>'; 
 
     fetch(`${API_URL}/api/scouter/${j.puuid}/${modoActual}`)
@@ -390,6 +389,7 @@ function mostrarScouter(j) {
 
             let tk = 0, td = 0, ta = 0, twins = 0;
             let rolesCount = {};
+            let compañeros = {}; // Para calcular el Dúo
             
             partidas.forEach(p => {
                 tk += p.k; td += p.d; ta += p.a;
@@ -399,26 +399,59 @@ function mostrarScouter(j) {
                 if (r !== 'none' && r !== 'ARAM' && !isAram) {
                     rolesCount[r] = (rolesCount[r] || 0) + 1;
                 }
+
+                // Analizar con quién jugó (Dúo)
+                const miEquipo = p.team1.some(jug => jug.name === j.nombre) ? p.team1 : p.team2;
+                miEquipo.forEach(jug => {
+                    if (jug.name !== j.nombre) {
+                        compañeros[jug.name] = (compañeros[jug.name] || 0) + 1;
+                    }
+                });
             });
 
             const kdaNum = td === 0 ? "Perfecto" : ((tk + ta) / td).toFixed(2);
             const wrNum = Math.round((twins / partidas.length) * 100);
             
-            const roleMapping = { 'middle': 'Mid', 'jungle': 'Jungla', 'bottom': 'ADC', 'utility': 'Support', 'top': 'Top' };
+            // FIX ICONOS: Traductor de Riot a OP.GG
+            const opggRoles = { 'middle': 'mid', 'jungle': 'jungle', 'bottom': 'adc', 'utility': 'support', 'top': 'top' };
+            const roleMappingText = { 'middle': 'Mid', 'jungle': 'Jungla', 'bottom': 'ADC', 'utility': 'Support', 'top': 'Top' };
+            
             const favRoleKey = Object.keys(rolesCount).length > 0 ? Object.keys(rolesCount).reduce((a, b) => rolesCount[a] > rolesCount[b] ? a : b) : null;
-            const favRole = favRoleKey ? roleMapping[favRoleKey.toLowerCase()] : (isAram ? 'ARAM' : 'Polivalente');
+            const favRole = favRoleKey ? roleMappingText[favRoleKey.toLowerCase()] : (isAram ? 'ARAM' : 'Polivalente');
 
-            // --- LÓGICA NUEVA: ICONO DE ROL ---
-            const roleIconSvg = favRoleKey && favRoleKey !== 'none' && !isAram 
-                ? `<img src="https://s-lol-web.op.gg/images/icon/icon-position-${favRoleKey.toLowerCase()}.svg" style="width:16px; vertical-align: middle; margin-left: 6px; filter: drop-shadow(0 0 2px rgba(0,0,0,0.8));">` 
+            // FIX 1: Icono de Línea Favorita
+            const opggRoleKey = favRoleKey ? opggRoles[favRoleKey.toLowerCase()] : null;
+            const roleIconSvg = opggRoleKey && !isAram 
+                ? `<img src="https://s-lol-web.op.gg/images/icon/icon-position-${opggRoleKey}.svg" style="width:16px; vertical-align: middle; margin-left: 6px; filter: drop-shadow(0 0 2px rgba(0,0,0,0.8));">` 
                 : '';
 
-            // --- LÓGICA NUEVA: PODIO DE MAESTRÍAS ---
+            // LÓGICA NUEVA: Calcular el Mejor Dúo
+            let mejorDuo = "Lobo Solitario";
+            let maxPartidasDuo = 0;
+            for (const [nom, cant] of Object.entries(compañeros)) {
+                if (cant > maxPartidasDuo && cant >= 2) { 
+                    mejorDuo = nom;
+                    maxPartidasDuo = cant;
+                }
+            }
+
+            // LÓGICA NUEVA: Generar Historial Visual y Tag
+            const rachaHtml = partidas.map(p => 
+                p.win ? `<span style="color:#2add9c; font-size:1rem; margin:0 1px;">●</span>` 
+                      : `<span style="color:#f25757; font-size:1rem; margin:0 1px;">●</span>`
+            ).join('');
+
+            let tagVibe = "";
+            if (kdaNum >= 3.5) tagVibe = '<span style="background:rgba(42, 221, 156, 0.2); color:#2add9c; padding:4px 8px; border-radius:4px; font-weight:bold;">🏆 1v9 Machine</span>';
+            else if (kdaNum <= 1.5) tagVibe = '<span style="background:rgba(242, 87, 87, 0.2); color:#f25757; padding:4px 8px; border-radius:4px; font-weight:bold;">🗑️ Ta trolleando</span>';
+            else if (wrNum >= 60) tagVibe = '<span style="background:rgba(212, 181, 92, 0.2); color:var(--color-gold); padding:4px 8px; border-radius:4px; font-weight:bold;">📈 En Racha</span>';
+            else tagVibe = '<span style="background:#2d3748; color:white; padding:4px 8px; border-radius:4px; font-weight:bold;">⚖️ Balanceado</span>';
+
+            // GENERAR HTML DE MAESTRÍAS
             let maestriasHtml = '';
             if (maestrias.length > 0) {
                 const ordenIndices = [1, 0, 2]; 
                 let podioHtml = '';
-                
                 ordenIndices.forEach(idx => {
                     if (maestrias[idx]) {
                         const m = maestrias[idx];
@@ -426,11 +459,12 @@ function mostrarScouter(j) {
                         const size = isTop1 ? '70px' : '50px';
                         const borderColor = isTop1 ? '#d4b55c' : (idx === 1 ? '#a0a0a0' : '#cd7f32'); 
                         const orderCSS = isTop1 ? 2 : (idx === 1 ? 1 : 3);
+                        const champFixMast = m.championId === 'FiddleSticks' ? 'Fiddlesticks' : m.championId; // FIX 3.1
                         
                         podioHtml += `
                             <div style="display:flex; flex-direction:column; align-items:center; margin: 0 10px; order: ${orderCSS};">
                                 <div style="position: relative;">
-                                    <img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/${m.championId}.png" 
+                                    <img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/${champFixMast}.png" 
                                          style="width:${size}; height:${size}; border-radius:50%; border:3px solid ${borderColor}; box-shadow: 0 0 15px ${borderColor}40; object-fit: cover;">
                                     ${isTop1 ? '<div style="position:absolute; top:-10px; left:50%; transform:translateX(-50%); font-size:1.2rem;">👑</div>' : ''}
                                 </div>
@@ -443,7 +477,7 @@ function mostrarScouter(j) {
                 maestriasHtml = `<div style="display:flex; justify-content:center; align-items:flex-end; width:100%; padding: 10px 0;">${podioHtml}</div>`;
             }
 
-            // --- INYECTAR CAJAS EN EL PANEL INDEPENDIENTE (Debajo de la gráfica) ---
+            // INYECTAR LAS 3 CAJAS ARRIBA
             panelStats.innerHTML = `
                 <div class="scouter-stats-container">
                     <div class="stat-box" style="border-left-color: ${kdaNum >= 3 ? 'var(--color-emerald)' : '#f25757'}">
@@ -459,20 +493,40 @@ function mostrarScouter(j) {
                             </div>
                         </div>
                     </div>
+                    
                     <div class="stat-box" style="border-left-color: var(--amarillo-pro)">
                         <span style="color:var(--color-subtexto); font-size:0.8rem; font-weight:bold; text-transform:uppercase; display:block; text-align:center; margin-bottom: 10px;">🏆 Campeones Más Jugados</span>
                         ${maestriasHtml || '<div style="color:gray; font-size:0.9rem; text-align:center;">Sin datos de maestría.</div>'}
                     </div>
+
+                    <div class="stat-box" style="border-left-color: #5765f2">
+                        <span style="color:var(--color-subtexto); font-size:0.8rem; font-weight:bold; text-transform:uppercase; display:block; margin-bottom: 8px;">📊 Radar de Quesito</span>
+                        <div style="display: flex; flex-direction: column; gap: 8px;">
+                            <div style="display:flex; justify-content: space-between; align-items:center;">
+                                <span style="color:white; font-size:0.9rem;">Forma Reciente:</span>
+                                <div>${rachaHtml}</div>
+                            </div>
+                            <div style="display:flex; justify-content: space-between; align-items:center;">
+                                <span style="color:white; font-size:0.9rem;">Mejor Dúo:</span>
+                                <b style="color:var(--color-gold); font-size:0.9rem;">${mejorDuo}</b>
+                            </div>
+                            <div style="display:flex; justify-content: space-between; align-items:center; margin-top: 5px;">
+                                <span style="color:white; font-size:0.9rem;">Estado:</span>
+                                ${tagVibe}
+                            </div>
+                        </div>
+                    </div>
                 </div>
             `;
-            panelStats.style.display = 'block'; 
             
-            // La lista de abajo (Scouter) queda solo para las tarjetas de partidas
             const divPartidas = document.createElement('div');
             lista.appendChild(divPartidas);
 
             let ultimaFechaVista = "";
             let balanceDelDia = 0;
+
+            // FIX 3: Helper para el nombre de Fiddlesticks
+            const champFix = (cName) => cName === 'FiddleSticks' ? 'Fiddlesticks' : cName;
 
             partidas.forEach((p, index) => {
                 const fechaCorta = p.fecha.split(' ')[0]; 
@@ -488,8 +542,8 @@ function mostrarScouter(j) {
                 const card = document.createElement('div');
                 card.className = `match-card ${p.win ? 'win' : 'loss'}`;
                 
-                const team1 = p.team1.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${pl.champ}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'"><b>${pl.name}</b></div>`).join('');
-                const team2 = p.team2.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${pl.champ}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'"><b>${pl.name}</b></div>`).join('');
+                const team1 = p.team1.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${champFix(pl.champ)}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'"><b>${pl.name}</b></div>`).join('');
+                const team2 = p.team2.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${champFix(pl.champ)}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'"><b>${pl.name}</b></div>`).join('');
                 const normalItems = p.items.slice(0, 6).map(id => {
                     const url = id > 0 ? `https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/item/${id}.png` : '';
                     return `<div class="m-item-box">${url ? `<img src="${url}">` : ''}</div>`;
@@ -497,8 +551,10 @@ function mostrarScouter(j) {
                 const trinketId = p.items[6];
                 const trinketUrl = trinketId > 0 ? `https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/item/${trinketId}.png` : '';
                 
-                const pos = p.role ? roleMapping[p.role.toLowerCase()] || 'none' : 'none';
-                const posIcon = pos !== 'none' && !isAram ? `https://s-lol-web.op.gg/images/icon/icon-position-${pos.toLowerCase()}.svg` : '';
+                // FIX 2: Icono de Rol en las Partidas
+                const pos = p.role ? p.role.toLowerCase() : 'none';
+                const matchOpggRole = opggRoles[pos];
+                const posIcon = matchOpggRole && !isAram ? `https://s-lol-web.op.gg/images/icon/icon-position-${matchOpggRole}.svg` : '';
                 
                 const fixSum = (s) => String(s).replace('Ignite', 'Dot');
                 const primaryRuneIcon = getRuneIcon(p.runes ? p.runes[0] : 0);
@@ -526,7 +582,7 @@ function mostrarScouter(j) {
                     </div>
                     <div class="m-champ-block">
                         <div class="m-champ-img-container">
-                            <img class="main-champ" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${p.champ}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'">
+                            <img class="main-champ" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${champFix(p.champ)}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'">
                             <span class="m-lvl">${p.lvl}</span>
                             ${posIcon ? `<div class="role-icon-container"><img src="${posIcon}" class="role-icon"></div>` : ''}
                         </div>
