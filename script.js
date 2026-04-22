@@ -285,7 +285,7 @@ function actualizarGrafica() {
             borderWidth: 3,       
             pointRadius: 2,       
             pointHoverRadius: 7,  
-            tension: 0.4,         
+            tension: 0,         
             spanGaps: true 
         };
     });
@@ -302,6 +302,12 @@ function actualizarGrafica() {
             layout: { padding: { top: 15, right: 20 } },
             normalized: true, 
             animation: { duration: 800, easing: 'easeOutQuart' },
+            transitions: {
+                zoom: {
+                    animation: {
+                        duration: 0
+                    }
+                }
             interaction: { mode: 'nearest', intersect: false },
             scales: {
                 y: {
