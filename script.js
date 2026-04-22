@@ -414,11 +414,11 @@ function cargarPartidasScouter(j, offset) {
                 let compañeros = {}; 
                 const champFix = (cName) => cName === 'FiddleSticks' ? 'Fiddlesticks' : cName;
 
-                // NUEVO: Sacamos los últimos campeones con borde de color según resultado
+                // CAMBIO 1: Achicamos a 25px y evitamos el salto de línea para que entren los 10 juntitos
                 const ultimosChampsHtml = partidas.map(p => {
                     const borderColor = p.remake ? '#9ca3af' : (p.win ? '#2add9c' : '#f25757');
                     return `<img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${champFix(p.champ)}.png" 
-                            style="width:28px; height:28px; border-radius:50%; border: 2px solid ${borderColor}; box-shadow: 0 0 5px ${borderColor}80;" 
+                            style="width:25px; height:25px; border-radius:50%; border: 2px solid ${borderColor}; box-shadow: 0 0 5px ${borderColor}80;" 
                             title="${p.champ} (${p.remake ? 'Remake' : (p.win ? 'Victoria' : 'Derrota')})">`;
                 }).join('');
                 
@@ -458,7 +458,7 @@ function cargarPartidasScouter(j, offset) {
 
                 const rachaHtml = partidas.map(p => p.win ? `<span style="color:#2add9c; font-size:1rem; margin:0 1px;">●</span>` : `<span style="color:#f25757; font-size:1rem; margin:0 1px;">●</span>`).join('');
 
-                // --- HUMOR NEGRO (EL NUEVO "ESTADO") ---
+                // --- HUMOR NEGRO ---
                 let tagVibe = "";
                 if (kdaNum >= 3.5 && wrNum >= 60) tagVibe = '<span style="background:rgba(42, 221, 156, 0.2); color:#2add9c; padding:4px 8px; border-radius:4px; font-weight:bold;">🗿 Carreador de Autistas</span>';
                 else if (kdaNum <= 1.0) tagVibe = '<span style="background:rgba(242, 87, 87, 0.2); color:#f25757; padding:4px 8px; border-radius:4px; font-weight:bold;">💩 Malo de Mierda</span>';
@@ -495,49 +495,74 @@ function cargarPartidasScouter(j, offset) {
                     maestriasHtml = `<div style="display:flex; justify-content:center; align-items:flex-end; width:100%; padding: 10px 0;">${podioHtml}</div>`;
                 }
 
-                // NUEVO: Agregamos el div extra para los 10 últimos champs
-                panelStats.innerHTML = `
-                    <div class="scouter-stats-container">
-                        <div class="stat-box" style="border-left-color: ${kdaNum >= 3 ? 'var(--color-emerald)' : '#f25757'}">
-                            <span style="color:var(--color-subtexto); font-size:0.8rem; font-weight:bold; text-transform:uppercase;">🔥 Desempeño (Últimas ${partidas.length})</span><br>
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
-                                <div>
-                                    <div style="font-size:2rem; font-weight:900; color:white; line-height: 1;">${kdaNum} KDA</div>
-                                    <span style="color:var(--color-gold); font-size:0.85rem;">${tk} / ${td} / ${ta} en total</span>
-                                </div>
-                                <div style="text-align: right;">
-                                    <div class="role-badge" style="background: ${wrNum >= 50 ? 'rgba(42, 221, 156, 0.2)' : 'rgba(242, 87, 87, 0.2)'}; color: ${wrNum >= 50 ? 'var(--color-emerald)' : '#f25757'}; margin-bottom: 5px;">WR: ${wrNum}%</div><br>
-                                    <div class="role-badge" style="margin: 0; display: inline-flex; align-items: center;">Línea Fav: ${favRole} ${roleIconSvg}</div>
-                                </div>
+                // CAMBIO 2: HEADER CON FOTO, NOMBRE, TAG Y RANGO
+                const iconId = j.profileIconId || 29;
+                const profileIconUrl = `https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/profileicon/${iconId}.png`;
+                const infoExtra = !isAram && j[modoActual].tier !== "UNRANKED" ? `${j[modoActual].tier} ${j[modoActual].rank} - ${j[modoActual].lp} LP` : (isAram ? 'Estadísticas Generales' : 'Unranked');
+
+                const headerHtml = `
+                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 5px; background: #1c1f26; padding: 15px; border-radius: 10px; border: 1px solid #2d3748;">
+                        <img src="${profileIconUrl}" style="width: 55px; height: 55px; border-radius: 50%; border: 2px solid var(--amarillo-pro); box-shadow: 0 0 10px rgba(212, 181, 92, 0.2);">
+                        <div>
+                            <div style="font-size: 1.25rem; font-weight: 900; color: white;">${j.nombre} <span style="color: gray; font-size: 0.9rem; font-weight: 500;">#${j.tag}</span></div>
+                            <div style="font-size: 0.8rem; color: var(--color-subtexto); margin-top: 3px;">
+                                ${!j.is_main ? `<span style="color: var(--color-gold); font-weight: bold;">Smurf de ${j.propietario}</span> • ` : ''}
+                                ${infoExtra}
                             </div>
                         </div>
+                    </div>
+                `;
+
+                // CAMBIO 3: ORDEN Y SEPARADORES SOLICITADOS
+                panelStats.innerHTML = `
+                    <div class="scouter-stats-container">
                         
+                        ${headerHtml}
+
                         <div class="stat-box" style="border-left-color: var(--amarillo-pro)">
                             <span style="color:var(--color-subtexto); font-size:0.8rem; font-weight:bold; text-transform:uppercase; display:block; text-align:center; margin-bottom: 10px;">🏆 Campeones Más Jugados</span>
                             ${maestriasHtml || '<div style="color:gray; font-size:0.9rem; text-align:center;">Sin datos de maestría.</div>'}
                         </div>
+                        
+                        <div style="text-align: center; margin: 15px 0 5px 0; border-bottom: 1px solid #2d3748; line-height: 0.1em;">
+                            <span style="background: var(--bg-tarjeta); padding: 0 15px; color: var(--color-subtexto); font-size: 0.75rem; font-weight: bold; text-transform: uppercase;">Estadísticas de las últimas ${partidas.length} partidas</span>
+                        </div>
+
+                        <div class="stat-box" style="border-left-color: ${kdaNum >= 3 ? 'var(--color-emerald)' : '#f25757'}">
+                            <div style="display: flex; justify-content: space-between; align-items: center;">
+                                <div>
+                                    <span style="color:var(--color-subtexto); font-size:0.75rem; font-weight:bold; text-transform:uppercase;">🔥 Desempeño</span><br>
+                                    <div style="font-size:1.8rem; font-weight:900; color:white; line-height: 1; margin-top: 3px;">${kdaNum} KDA</div>
+                                    <span style="color:var(--color-gold); font-size:0.8rem;">${tk} / ${td} / ${ta}</span>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div class="role-badge" style="background: ${wrNum >= 50 ? 'rgba(42, 221, 156, 0.2)' : 'rgba(242, 87, 87, 0.2)'}; color: ${wrNum >= 50 ? 'var(--color-emerald)' : '#f25757'}; margin-bottom: 5px;">WR: ${wrNum}%</div><br>
+                                    <div class="role-badge" style="margin: 0; display: inline-flex; align-items: center;">Fav: ${favRole} ${roleIconSvg}</div>
+                                </div>
+                            </div>
+                        </div>
 
                         <div class="stat-box" style="border-left-color: #5765f2">
-                            <span style="color:var(--color-subtexto); font-size:0.8rem; font-weight:bold; text-transform:uppercase; display:block; margin-bottom: 8px;">📊 Radar de Quesito</span>
+                            <span style="color:var(--color-subtexto); font-size:0.75rem; font-weight:bold; text-transform:uppercase; display:block; margin-bottom: 8px;">📊 Radar de Quesito</span>
                             <div style="display: flex; flex-direction: column; gap: 8px;">
                                 <div style="display:flex; justify-content: space-between; align-items:center;">
-                                    <span style="color:white; font-size:0.9rem;">Forma Reciente:</span>
+                                    <span style="color:white; font-size:0.85rem;">Forma Reciente:</span>
                                     <div>${rachaHtml}</div>
                                 </div>
                                 <div style="display:flex; justify-content: space-between; align-items:center;">
-                                    <span style="color:white; font-size:0.9rem;">Mejor Dúo:</span>
-                                    <b style="color:var(--color-gold); font-size:0.9rem;">${mejorDuo}</b>
+                                    <span style="color:white; font-size:0.85rem;">Mejor Dúo:</span>
+                                    <b style="color:var(--color-gold); font-size:0.85rem;">${mejorDuo}</b>
                                 </div>
-                                <div style="display:flex; justify-content: space-between; align-items:center; margin-top: 5px;">
-                                    <span style="color:white; font-size:0.9rem;">Estado:</span>
+                                <div style="display:flex; justify-content: space-between; align-items:center; margin-top: 2px;">
+                                    <span style="color:white; font-size:0.85rem;">Estado:</span>
                                     ${tagVibe}
                                 </div>
                             </div>
                         </div>
 
-                        <div class="stat-box" style="border-left-color: #4bcaeb; padding: 10px 15px;">
-                            <span style="color:var(--color-subtexto); font-size:0.75rem; font-weight:bold; text-transform:uppercase; display:block; margin-bottom: 6px;">🎮 Selecciones Recientes</span>
-                            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                        <div class="stat-box" style="border-left-color: #4bcaeb; padding: 12px;">
+                            <span style="color:var(--color-subtexto); font-size:0.75rem; font-weight:bold; text-transform:uppercase; display:block; margin-bottom: 8px; text-align: center;">🎮 Selecciones Recientes</span>
+                            <div style="display: flex; gap: 5px; justify-content: center; flex-wrap: nowrap;">
                                 ${ultimosChampsHtml}
                             </div>
                         </div>
