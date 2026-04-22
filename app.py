@@ -101,6 +101,7 @@ def procesar_jugador(jugador, arg_tz):
     db_id = jugador.get('id')
     name_db, tag_db = jugador['nombre'], jugador['tag']
     puuid = jugador.get('puuid')
+    profile_icon_id = jugador.get('profileIconId') # <-- Extraemos de la DB
     
     # Si la cuenta es nueva y no tiene PUUID, lo buscamos rápido
     if not puuid:
@@ -109,6 +110,18 @@ def procesar_jugador(jugador, arg_tz):
         puuid = res_acc.json()['puuid']
         if supabase and db_id:
             supabase.table("jugadores").update({"puuid": puuid}).eq("id", db_id).execute()
+
+    # NUEVO: Si no tenemos la foto en la DB (o es la del casquito 29), la buscamos y la guardamos para siempre
+    if not profile_icon_id or profile_icon_id == 29:
+        res_summ = session.get(f"https://la2.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/{puuid}")
+        if res_summ.status_code == 200:
+            profile_icon_id = res_summ.json().get('profileIconId', 29)
+            if supabase and db_id:
+                try:
+                    supabase.table("jugadores").update({"profileIconId": profile_icon_id}).eq("id", db_id).execute()
+                except: pass
+        else:
+            profile_icon_id = 29
             
     try:
         # 1. Traemos Ligas (1 sola petición)
@@ -126,7 +139,7 @@ def procesar_jugador(jugador, arg_tz):
 
         d = {
             "nombre": name_db, "tag": tag_db, "puuid": puuid, "last_game": "Reciente",
-            "profileIconId": jugador.get('profileIconId', 29),
+            "profileIconId": profile_icon_id, # <--- ACA LE PONEMOS LA VARIABLE NUEVA
             "is_main": jugador.get('is_main', True),
             "propietario": jugador.get('propietario'),
             "soloq": {"tier": "UNRANKED", "rank": "", "lp": 0, "wins": 0, "losses": 0, "wr": 0, "puntos_grafica": 0},
@@ -247,19 +260,25 @@ def add_jugador():
         if res_acc.status_code != 200:
             return jsonify({"error": "No se encontró el jugador en Riot. ¿Escribiste bien el Nombre y Tag?"}), 404
 
-        # NUEVO: Sacamos el PUUID y el nombre real directo desde Riot
         acc_data = res_acc.json()
         puuid_real = acc_data['puuid']
         nombre_real = acc_data.get('gameName', nombre)
         tag_real = acc_data.get('tagLine', tag)
 
-        # NUEVO: Guardamos todo junto en la tabla
+        # NUEVO: Buscamos el icono de perfil antes de guardar al pibe nuevo
+        profile_icon_id = 29
+        res_summ = requests.get(f"https://la2.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/{puuid_real}", headers=headers)
+        if res_summ.status_code == 200:
+            profile_icon_id = res_summ.json().get('profileIconId', 29)
+
+        # Guardamos todo en la base de datos
         supabase.table("jugadores").insert({
             "nombre": nombre_real, 
             "tag": tag_real, 
             "is_main": is_main, 
             "propietario": propietario, 
-            "puuid": puuid_real
+            "puuid": puuid_real,
+            "profileIconId": profile_icon_id # <--- Guardamos la foto
         }).execute()
 
         cache_leaderboard["datos"] = []
