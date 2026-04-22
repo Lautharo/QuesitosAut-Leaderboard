@@ -20,6 +20,8 @@ SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
 headers = {"X-Riot-Token": API_KEY}
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
+session = requests.Session()          # <--- NUEVO
+session.headers.update(headers)
 
 QUEUES = {"soloq": 420, "flex": 440, "aram": 450}
 VALOR_TIER = {"CHALLENGER": 9000, "GRANDMASTER": 8000, "MASTER": 7000, "DIAMOND": 6000, "EMERALD": 5000, "PLATINUM": 4000, "GOLD": 3000, "SILVER": 2000, "BRONZE": 1000, "IRON": 0, "UNRANKED": -1000}
@@ -41,7 +43,7 @@ def log_error(mensaje):
     """Fuerza a Render a mostrar el error en consola al instante"""
     print(f"[ERROR CRÍTICO] {mensaje}", file=sys.stderr, flush=True)
 
-def sync_lp_change(puuid, queue_type, current_lp, puntos_grafica, last_match_id, end_ts):
+def sync_lp_change(puuid, queue_type, current_lp, puntos_grafica, last_match_id):
     if not supabase: return 0
     try:
         with db_lock:
@@ -52,7 +54,6 @@ def sync_lp_change(puuid, queue_type, current_lp, puntos_grafica, last_match_id,
             
             diff = puntos_grafica - last_pts 
 
-            # 1. Si hay diferencia real de puntos, guardamos siempre
             if diff != 0 or not res.data:
                 m_id = last_match_id if last_match_id else f"manual_{int(time.time())}"
                 supabase.table("match_history").upsert({
@@ -61,16 +62,17 @@ def sync_lp_change(puuid, queue_type, current_lp, puntos_grafica, last_match_id,
                     "match_id": m_id
                 }, on_conflict="puuid,queue_type,match_id").execute()
             
-            # 2. Si los puntos NO cambiaron (0 LP), solo guardamos si confirmamos que es una ID nueva de esta cola específica
             elif last_match_id and last_match_id != last_saved_match:
-                # Escudo anti-lag: Esperar 10 mins (600 segundos) para asegurarnos que Riot ya actualizó
-                if time.time() - end_ts > 600:
-                    supabase.table("match_history").upsert({
-                        "puuid": puuid, "queue_type": queue_type,
-                        "league_points": current_lp, "puntos_grafica": puntos_grafica, "change_lp": 0,
-                        "match_id": last_match_id
-                    }, on_conflict="puuid,queue_type,match_id").execute()
-            
+                # OPTIMIZACIÓN: Solo le pedimos el detalle a Riot si es 0 LP y es nueva
+                res_info = session.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/{last_match_id}")
+                if res_info.status_code == 200:
+                    end_ts = res_info.json()['info'].get('gameEndTimestamp', 0) / 1000
+                    if time.time() - end_ts > 600:
+                        supabase.table("match_history").upsert({
+                            "puuid": puuid, "queue_type": queue_type,
+                            "league_points": current_lp, "puntos_grafica": puntos_grafica, "change_lp": 0,
+                            "match_id": last_match_id
+                        }, on_conflict="puuid,queue_type,match_id").execute()
             return diff
     except Exception as e:
         log_error(f"Supabase falló al sincronizar PL de {puuid}: {e}")
@@ -98,96 +100,33 @@ def get_historial_db(puuid, queue_type):
 def procesar_jugador(jugador, arg_tz):
     db_id = jugador.get('id')
     name_db, tag_db = jugador['nombre'], jugador['tag']
-    puuid_db = jugador.get('puuid')
+    puuid = jugador.get('puuid')
     
+    # Si la cuenta es nueva y no tiene PUUID, lo buscamos rápido
+    if not puuid:
+        res_acc = session.get(f"https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{name_db}/{tag_db}")
+        if res_acc.status_code != 200: return None
+        puuid = res_acc.json()['puuid']
+        if supabase and db_id:
+            supabase.table("jugadores").update({"puuid": puuid}).eq("id", db_id).execute()
+            
     try:
-        # Pausa de medio segundo por jugador para no saturar a Riot
-        time.sleep(0.5) 
-        
-        # --- LÓGICA ANTI-CAMBIO DE NOMBRE ---
-        if puuid_db:
-            # Si ya tenemos su PUUID, lo buscamos por código (inmune a cambios)
-            url_acc = f"https://americas.api.riotgames.com/riot/account/v1/accounts/by-puuid/{puuid_db}"
-            res_acc = requests.get(url_acc, headers=headers)
-            if res_acc.status_code != 200: return None
-            acc_data = res_acc.json()
-            
-            current_name = acc_data.get('gameName', name_db)
-            current_tag = acc_data.get('tagLine', tag_db)
-            puuid = puuid_db
-            
-            # Si el nombre cambió en el juego, lo auto-actualizamos en Supabase
-            if current_name != name_db or current_tag != tag_db:
-                if supabase and db_id:
-                    supabase.table("jugadores").update({"nombre": current_name, "tag": current_tag}).eq("id", db_id).execute()
-                name_db, tag_db = current_name, current_tag
-        else:
-            # Sistema viejo: Buscamos por nombre (para los que ya estaban guardados)
-            url_acc = f"https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{name_db}/{tag_db}"
-            res_acc = requests.get(url_acc, headers=headers)
-            if res_acc.status_code != 200: return None
-            acc_data = res_acc.json()
-            
-            puuid = acc_data['puuid']
-            current_name = acc_data.get('gameName', name_db)
-            current_tag = acc_data.get('tagLine', tag_db)
-            
-            # Le guardamos el PUUID para que sea inmune de ahora en adelante
-            if supabase and db_id:
-                supabase.table("jugadores").update({"puuid": puuid, "nombre": current_name, "tag": current_tag}).eq("id", db_id).execute()
-            name_db, tag_db = current_name, current_tag
-            
-        # ------------------------------------------------------------------
-        # Pedimos a Riot los datos de Invocador (para sacar la foto)
-        # ------------------------------------------------------------------
-        res_summoner = requests.get(f"https://la2.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/{puuid}", headers=headers)
-        profile_icon_id = 29 
-        if res_summoner.status_code == 200:
-            profile_icon_id = res_summoner.json().get('profileIconId', 29)
-        # ------------------------------------------------------------------
-
-        # NUEVO FIX: Buscamos hasta 5 partidas para separar cuál fue la última de SoloQ y cuál de Flex
-        res_m = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count=5", headers=headers)
-        if res_m.status_code != 200: return None 
-        m_ids = res_m.json()
-        
-        latest_matches = {"soloq": ("", 0), "flex": ("", 0)}
-        last_date = "---"
-        first_date_set = False
-        
-        for mid in m_ids:
-            res_info = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/{mid}", headers=headers)
-            if res_info.status_code == 200:
-                m_info = res_info.json()
-                if 'gameEndTimestamp' in m_info['info']:
-                    end_ts = m_info['info']['gameEndTimestamp'] / 1000
-                    
-                    if not first_date_set:
-                        dt_utc = datetime.fromtimestamp(end_ts, tz=pytz.utc)
-                        last_date = dt_utc.astimezone(arg_tz).strftime('%d/%m %H:%M')
-                        first_date_set = True
-
-                    # Separamos los IDs según la cola (420 es SoloQ, 440 es Flex)
-                    qid = m_info['info'].get('queueId')
-                    if qid == 420 and not latest_matches["soloq"][0]:
-                        latest_matches["soloq"] = (mid, end_ts)
-                    elif qid == 440 and not latest_matches["flex"][0]:
-                        latest_matches["flex"] = (mid, end_ts)
-                    
-                    # Si ya encontramos la última de ambas colas, cortamos el loop
-                    if latest_matches["soloq"][0] and latest_matches["flex"][0]:
-                        break
-
-        res_league = requests.get(f"https://la2.api.riotgames.com/lol/league/v4/entries/by-puuid/{puuid}", headers=headers)
-        if res_league.status_code != 200: return None
-        leagues = res_league.json()
-        
+        # 1. Traemos Ligas (1 sola petición)
+        res_league = session.get(f"https://la2.api.riotgames.com/lol/league/v4/entries/by-puuid/{puuid}")
+        leagues = res_league.json() if res_league.status_code == 200 else []
         sq = next((q for q in leagues if q['queueType'] == 'RANKED_SOLO_5x5'), None)
         fl = next((q for q in leagues if q['queueType'] == 'RANKED_FLEX_SR'), None)
 
+        # 2. Truco Maestro: Pedimos directo a Riot que nos filtre el ID de SoloQ y Flex (1 petición cada uno)
+        res_sq = session.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue=420&start=0&count=1")
+        sq_id = res_sq.json()[0] if res_sq.status_code == 200 and res_sq.json() else ""
+
+        res_fl = session.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue=440&start=0&count=1")
+        fl_id = res_fl.json()[0] if res_fl.status_code == 200 and res_fl.json() else ""
+
         d = {
-            "nombre": name_db, "tag": tag_db, "puuid": puuid, "last_game": last_date,
-            "profileIconId": profile_icon_id,
+            "nombre": name_db, "tag": tag_db, "puuid": puuid, "last_game": "Reciente",
+            "profileIconId": jugador.get('profileIconId', 29),
             "is_main": jugador.get('is_main', True),
             "propietario": jugador.get('propietario'),
             "soloq": {"tier": "UNRANKED", "rank": "", "lp": 0, "wins": 0, "losses": 0, "wr": 0, "puntos_grafica": 0},
@@ -202,26 +141,23 @@ def procesar_jugador(jugador, arg_tz):
         if sq:
             pts_sq = VALOR_TIER.get(sq['tier'], 0) + VALOR_RANK.get(sq['rank'], 0) + sq['leaguePoints']
             d["soloq"].update({"tier": sq['tier'], "rank": sq['rank'], "lp": sq['leaguePoints'], "wins": sq['wins'], "losses": sq['losses'], "wr": round((sq['wins']/(sq['wins']+sq['losses']))*100,1), "puntos_grafica": pts_sq})
-            sync_lp_change(puuid, "soloq", sq['leaguePoints'], pts_sq, latest_matches["soloq"][0], latest_matches["soloq"][1])
+            sync_lp_change(puuid, "soloq", sq['leaguePoints'], pts_sq, sq_id)
         if fl:
             pts_fl = VALOR_TIER.get(fl['tier'], 0) + VALOR_RANK.get(fl['rank'], 0) + fl['leaguePoints']
             d["flex"].update({"tier": fl['tier'], "rank": fl['rank'], "lp": fl['leaguePoints'], "wins": fl['wins'], "losses": fl['losses'], "wr": round((fl['wins']/(fl['wins']+fl['losses']))*100,1), "puntos_grafica": pts_fl})
-            sync_lp_change(puuid, "flex", fl['leaguePoints'], pts_fl, latest_matches["flex"][0], latest_matches["flex"][1])
+            sync_lp_change(puuid, "flex", fl['leaguePoints'], pts_fl, fl_id)
         
-        # Validación extra en ARAM
-        # --- FIX TOTAL ARAMS (2026 + KAOS) ---
+        # 3. ARAM
         total_aram = 0
         for qid in [450, 1130]:
-            res_aram = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue={qid}&startTime=1767225600&count=100", headers=headers)
+            res_aram = session.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue={qid}&startTime=1767225600&count=100")
             if res_aram.status_code == 200:
-                aram_n = res_aram.json()
-                total_aram += len(aram_n) if isinstance(aram_n, list) else 0
-
+                total_aram += len(res_aram.json())
         d["aram"].update({"total_partidas": total_aram, "puntos_grafica": total_aram})
 
         return d
     except Exception as e:
-        log_error(f"Error procesando a {name}: {e}")
+        log_error(f"Error procesando a {name_db}: {e}")
         return None
 
 @app.route('/')
