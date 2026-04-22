@@ -245,49 +245,41 @@ function actualizarGrafica() {
     const ctx = document.getElementById('graficoElo').getContext('2d');
     if (miGrafica) miGrafica.destroy();
     
-    // 1. Auto-parchear a los jugadores nuevos o smurfs
     const hoy = new Date().toLocaleDateString('es-AR', {day: '2-digit', month: '2-digit'});
     datosGlobales.forEach(j => {
         if (j.historiales && j.historiales[modoActual] && j.historiales[modoActual].length === 0 && j[modoActual].tier !== "UNRANKED") {
-            j.historiales[modoActual].push({
-                fecha: hoy,
-                puntos: j[modoActual].puntos_grafica
-            });
+            j.historiales[modoActual].push({ fecha: hoy, puntos: j[modoActual].puntos_grafica });
         }
     });
 
-    // 2. Aplicar Filtros de Smurfs y Dueños
     const mostrarSmurfs = document.getElementById('filtro-smurf') ? document.getElementById('filtro-smurf').checked : true;
     const filtroJugador = document.getElementById('filtro-jugador') ? document.getElementById('filtro-jugador').value : 'TODOS';
 
     let jugadoresA_Mostrar = datosGlobales;
     if (!mostrarSmurfs) jugadoresA_Mostrar = jugadoresA_Mostrar.filter(j => j.is_main);
-    if (filtroJugador !== 'TODOS') {
-        jugadoresA_Mostrar = jugadoresA_Mostrar.filter(j => j.nombre === filtroJugador || j.propietario === filtroJugador);
-    }
+    if (filtroJugador !== 'TODOS') jugadoresA_Mostrar = jugadoresA_Mostrar.filter(j => j.nombre === filtroJugador || j.propietario === filtroJugador);
 
     const jugadoresConHistorial = jugadoresA_Mostrar.filter(j => j.historiales && j.historiales[modoActual] && j.historiales[modoActual].length > 0);
     if (jugadoresConHistorial.length === 0) return;
 
-    // --- 3. EL FIX: ALINEACIÓN SECUENCIAL (A LA DERECHA) ---
-    // Buscamos al jugador que más partidas jugó para saber cuántos puntos (ticks) va a tener el eje X
-    const jugadorMasLargo = jugadoresConHistorial.reduce((max, j) => 
-        j.historiales[modoActual].length > max.historiales[modoActual].length ? j : max
-    );
-    const labels = jugadorMasLargo.historiales[modoActual].map(h => h.fecha);
-    const maxLength = labels.length;
-
+    // FIX GRÁFICA INDEPENDIENTE: Buscamos el máximo de partidas jugadas para el eje X
+    let maxPartidas = 0;
+    
     const datasets = jugadoresConHistorial.map(j => {
         const colorJugador = obtenerColor(j.nombre);
-        const data = j.historiales[modoActual].map(h => h.puntos);
+        const historial = j.historiales[modoActual];
+        if (historial.length > maxPartidas) maxPartidas = historial.length;
 
-        // ALINEACIÓN A LA IZQUIERDA: El espacio vacío va al final
-        const padding = new Array(maxLength - data.length).fill(null);
-        const dataAlineada = data.concat(padding); 
+        // Creamos objetos {x, y} para que Chart.js los acomode exactamente donde van
+        const dataPuntos = historial.map((h, i) => ({
+            x: i, 
+            y: h.puntos,
+            fechaOriginal: h.fecha // Guardamos la fecha para el Tooltip
+        }));
 
         return {
             label: j.nombre,
-            data: dataAlineada,
+            data: dataPuntos,
             borderColor: colorJugador,
             backgroundColor: colorJugador,
             borderWidth: 3,       
@@ -297,6 +289,9 @@ function actualizarGrafica() {
             spanGaps: true 
         };
     });
+
+    // Creamos etiquetas numéricas del 0 al maxPartidas para el eje X
+    const labels = Array.from({length: maxPartidas}, (_, i) => i);
 
    miGrafica = new Chart(ctx, { 
         type: 'line', 
@@ -316,8 +311,11 @@ function actualizarGrafica() {
                     ticks: { display: false }
                 },
                 x: {
+                    type: 'linear',
+                    min: 0,
+                    max: maxPartidas - 1,
                     grid: { color: 'rgba(255, 255, 255, 0.05)' },
-                    ticks: { display: false } // OCULTA LAS FECHAS MENTIROSAS DEL EJE X
+                    ticks: { display: false } 
                 }
             },
             plugins: { 
@@ -328,13 +326,11 @@ function actualizarGrafica() {
                 tooltip: {
                     animation: { duration: 150 }, 
                     callbacks: {
-                        title: () => null, // Oculta el título del tooltip por defecto
+                        title: () => null, 
                         label: function(context) {
-                            // MAGIA: Como están alineados a la izquierda, el índice del mouse coincide exacto con el historial
-                            const jugador = jugadoresConHistorial[context.datasetIndex];
-                            const fechaReal = jugador.historiales[modoActual][context.dataIndex].fecha;
-                            
-                            return `${context.dataset.label} (${fechaReal}): ${decodificarPuntos(context.parsed.y)}`;
+                            // Extraemos la fecha del objeto {x, y, fechaOriginal}
+                            const rawData = context.raw;
+                            return `${context.dataset.label} (${rawData.fechaOriginal}): ${decodificarPuntos(rawData.y)}`;
                         }
                     }
                 },
@@ -418,8 +414,13 @@ function cargarPartidasScouter(j, offset) {
                 let compañeros = {}; 
                 const champFix = (cName) => cName === 'FiddleSticks' ? 'Fiddlesticks' : cName;
 
-                // Sacamos los últimos campeones para la caja extra
-                const ultimosChampsHtml = partidas.map(p => `<img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${champFix(p.champ)}.png" style="width:28px; height:28px; border-radius:50%; border: 1px solid #2d3748;" title="${p.champ}">`).join('');
+                // NUEVO: Sacamos los últimos campeones con borde de color según resultado
+                const ultimosChampsHtml = partidas.map(p => {
+                    const borderColor = p.remake ? '#9ca3af' : (p.win ? '#2add9c' : '#f25757');
+                    return `<img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${champFix(p.champ)}.png" 
+                            style="width:28px; height:28px; border-radius:50%; border: 2px solid ${borderColor}; box-shadow: 0 0 5px ${borderColor}80;" 
+                            title="${p.champ} (${p.remake ? 'Remake' : (p.win ? 'Victoria' : 'Derrota')})">`;
+                }).join('');
                 
                 partidas.forEach(p => {
                     tk += p.k; td += p.d; ta += p.a;

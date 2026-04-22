@@ -135,20 +135,24 @@ def procesar_jugador(jugador, arg_tz):
             profile_icon_id = res_summoner.json().get('profileIconId', 29)
         # ------------------------------------------------------------------
 
-        # NUEVO: Validamos que Riot responda OK (200) antes de leer el JSON
-        res_m = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count=1", headers=headers)
+        # NUEVO FIX: Pedimos 3 por si hay alguna bugeada/en curso
+        res_m = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count=3", headers=headers)
         if res_m.status_code != 200: return None 
         m_ids = res_m.json()
         
-        last_match_id = m_ids[0] if m_ids else ""
+        last_match_id = ""
         last_date = "---"
         
-        if m_ids:
-            res_info = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/{m_ids[0]}", headers=headers)
+        for mid in m_ids:
+            res_info = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/{mid}", headers=headers)
             if res_info.status_code == 200:
                 m_info = res_info.json()
-                dt_utc = datetime.fromtimestamp(m_info['info']['gameEndTimestamp']/1000, tz=pytz.utc)
-                last_date = dt_utc.astimezone(arg_tz).strftime('%d/%m %H:%M')
+                # Si tiene gameEndTimestamp, la partida ya terminó.
+                if 'gameEndTimestamp' in m_info['info']:
+                    last_match_id = mid
+                    dt_utc = datetime.fromtimestamp(m_info['info']['gameEndTimestamp']/1000, tz=pytz.utc)
+                    last_date = dt_utc.astimezone(arg_tz).strftime('%d/%m %H:%M')
+                    break # Encontramos la última terminada, salimos del loop
 
         res_league = requests.get(f"https://la2.api.riotgames.com/lol/league/v4/entries/by-puuid/{puuid}", headers=headers)
         if res_league.status_code != 200: return None
