@@ -350,7 +350,7 @@ def get_scouter(puuid, modo):
             else:
                 q_name = "Flex"
 
-            lp_real = 0
+            lp_real = None # <--- AHORA ES NONE EN VEZ DE 0
             lp_current = 0 
             if modo != 'aram' and supabase:
                 try:

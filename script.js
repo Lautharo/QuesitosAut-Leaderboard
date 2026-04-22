@@ -281,22 +281,19 @@ function actualizarGrafica() {
         const colorJugador = obtenerColor(j.nombre);
         const data = j.historiales[modoActual].map(h => h.puntos);
 
-        // --- EL FIX ESTÁ ACÁ ---
-        // Creamos los espacios vacíos para rellenar
+        // ALINEACIÓN A LA IZQUIERDA: El espacio vacío va al final
         const padding = new Array(maxLength - data.length).fill(null);
-        
-        // Sumamos los datos PRIMERO y el espacio vacío AL FINAL (antes estaba al revés)
-        const dataAlineada = data.concat(padding);
+        const dataAlineada = data.concat(padding); 
 
         return {
             label: j.nombre,
             data: dataAlineada,
             borderColor: colorJugador,
             backgroundColor: colorJugador,
-            borderWidth: 3,       // Aumentamos a 3 para más grosor
-            pointRadius: 2,       // Achicamos el punto normal
-            pointHoverRadius: 7,  // Agrandamos el punto al pasar el mouse
-            tension: 0.4,         // ¡La magia de las curvas! (0 es recto, 0.4 es suave)
+            borderWidth: 3,       
+            pointRadius: 2,       
+            pointHoverRadius: 7,  
+            tension: 0.4,         
             spanGaps: true 
         };
     });
@@ -308,22 +305,8 @@ function actualizarGrafica() {
             responsive: true, 
             maintainAspectRatio: false, 
             layout: { padding: { top: 15, right: 20 } },
-            
-            // --- NUEVO: OPTIMIZACIÓN EXTREMA Y ANIMACIONES ---
             normalized: true, 
-            animation: {
-                duration: 800,
-                easing: 'easeOutQuart'
-            },
-            transitions: {
-                zoom: {
-                    animation: {
-                        duration: 100 
-                    }
-                }
-            },
-            // -------------------------------------------------
-
+            animation: { duration: 800, easing: 'easeOutQuart' },
             interaction: { mode: 'nearest', intersect: false },
             scales: {
                 y: {
@@ -333,7 +316,8 @@ function actualizarGrafica() {
                     ticks: { display: false }
                 },
                 x: {
-                    grid: { color: 'rgba(255, 255, 255, 0.05)' }
+                    grid: { color: 'rgba(255, 255, 255, 0.05)' },
+                    ticks: { display: false } // OCULTA LAS FECHAS MENTIROSAS DEL EJE X
                 }
             },
             plugins: { 
@@ -342,15 +326,20 @@ function actualizarGrafica() {
                     labels: { color: '#9ca3af', usePointStyle: true, boxWidth: 6, boxHeight: 6, padding: 15, font: { size: 11 } } 
                 },
                 tooltip: {
-                    animation: { duration: 150 }, // Tooltip más fluido
+                    animation: { duration: 150 }, 
                     callbacks: {
+                        title: () => null, // Oculta el título del tooltip por defecto
                         label: function(context) {
-                            return `${context.dataset.label}: ${decodificarPuntos(context.parsed.y)}`;
+                            // MAGIA: Como están alineados a la izquierda, el índice del mouse coincide exacto con el historial
+                            const jugador = jugadoresConHistorial[context.datasetIndex];
+                            const fechaReal = jugador.historiales[modoActual][context.dataIndex].fecha;
+                            
+                            return `${context.dataset.label} (${fechaReal}): ${decodificarPuntos(context.parsed.y)}`;
                         }
                     }
                 },
                 zoom: {
-                    pan: { enabled: true, mode: 'xy', threshold: 5 }, // Reacciona más rápido al arrastrar
+                    pan: { enabled: true, mode: 'xy', threshold: 5 }, 
                     zoom: { wheel: { enabled: true }, drag: false, pinch: { enabled: true }, mode: 'xy' }
                 }
             } 
@@ -579,9 +568,16 @@ function mostrarScouter(j) {
 
                 let lpHtml = '';
                 if (!isAram) {
-                    if (p.lp_change === 0) {
+                    // Si es None (null), significa que es una partida vieja que no está en la base
+                    if (p.lp_change === null || p.lp_change === undefined) {
                         lpHtml = `<br><span style="color: var(--color-subtexto); font-size: 0.8rem;">Calibrando PL...</span>`;
-                    } else {
+                    } 
+                    // Si es exactamente 0, significa que jugaste, está en la base, pero un AFK o algo te dio 0 puntos
+                    else if (p.lp_change === 0) {
+                        lpHtml = `<br><span style="color: var(--color-subtexto); font-weight: bold; font-size: 0.8rem;">0 LP</span>`;
+                    } 
+                    // Si ganaste o perdiste puntos normales
+                    else {
                         const lpSign = p.lp_change > 0 ? '+' : '';
                         const lpClass = p.lp_change > 0 ? 'lp-gain' : 'lp-loss';
                         lpHtml = `<br><span class="${lpClass}">${lpSign}${p.lp_change} LP</span>`;
