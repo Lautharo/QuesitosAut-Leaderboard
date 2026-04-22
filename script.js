@@ -598,117 +598,117 @@ function cargarPartidasScouter(j, offset) {
                 `;
             }
 
-            // --- INYECCIÓN DE CARTAS DE PARTIDAS ---
+            // --- INYECCIÓN DE CARTAS DE PARTIDAS (NUEVA LÓGICA AGRUPADA) ---
             const divPartidas = offset === 0 ? document.createElement('div') : lista.querySelector('.contenedor-partidas-append');
             if (offset === 0) {
                 divPartidas.className = "contenedor-partidas-append";
                 lista.appendChild(divPartidas);
             }
 
-            let ultimaFechaVista = "";
-            let balanceDelDia = 0;
             const champFix = (cName) => cName === 'FiddleSticks' ? 'Fiddlesticks' : cName;
-            
-            // MAGIA 3: Preparamos la lista de nombres para detectar amigos en la partida
             const nombresAmigos = datosGlobales.map(x => x.nombre.toLowerCase());
             const esAmigo = (nombre) => nombresAmigos.includes(nombre.toLowerCase()) && nombre.toLowerCase() !== j.nombre.toLowerCase();
 
-            partidas.forEach((p, index) => {
-                const fechaCorta = p.fecha.split(' ')[0]; 
-                if (ultimaFechaVista !== "" && ultimaFechaVista !== fechaCorta) {
-                    insertarBannerDiario(divPartidas, ultimaFechaVista, balanceDelDia);
-                    balanceDelDia = 0; 
+            // PASO 1: Agrupamos las partidas por fecha primero y calculamos el PL Total del día
+            const partidasPorDia = {};
+            partidas.forEach(p => {
+                const fechaCorta = p.fecha.split(' ')[0];
+                if (!partidasPorDia[fechaCorta]) {
+                    partidasPorDia[fechaCorta] = { balance: 0, matches: [] };
                 }
-
-                ultimaFechaVista = fechaCorta;
-                balanceDelDia += p.lp_change;
-
-                const isRemake = p.remake;
-                const textoResultado = isRemake ? 'Remake' : (p.win ? 'Victoria' : 'Derrota');
-                const colorResultado = isRemake ? '#9ca3af' : (p.win ? '#2add9c' : '#f25757');
-                const card = document.createElement('div');
-                card.className = `match-card ${isRemake ? 'remake' : (p.win ? 'win' : 'loss')}`;
-                
-                // Aplicamos la clase 'quesito' a los amigos que estén en nuestra base de datos
-                const generarEquipoHtml = (equipo) => equipo.map(pl => {
-                    const extraClass = pl.name === j.nombre ? 'me' : (esAmigo(pl.name) ? 'quesito' : '');
-                    return `<div class="player-row ${extraClass}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${champFix(pl.champ)}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'"><b>${pl.name}</b></div>`;
-                }).join('');
-
-                const team1Html = generarEquipoHtml(p.team1);
-                const team2Html = generarEquipoHtml(p.team2);
-
-                const normalItems = p.items.slice(0, 6).map(id => {
-                    const url = id > 0 ? `https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/item/${id}.png` : '';
-                    return `<div class="m-item-box">${url ? `<img src="${url}">` : ''}</div>`;
-                }).join('');
-                const trinketId = p.items[6];
-                const trinketUrl = trinketId > 0 ? `https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/item/${trinketId}.png` : '';
-                
-                const pos = p.role ? p.role.toLowerCase() : 'none';
-                const opggRoles = { 'middle': 'mid', 'jungle': 'jungle', 'bottom': 'adc', 'utility': 'support', 'top': 'top' };
-                const matchOpggRole = opggRoles[pos];
-                const posIcon = matchOpggRole && !isAram ? `https://s-lol-web.op.gg/images/icon/icon-position-${matchOpggRole}.svg` : '';
-                
-                const fixSum = (s) => String(s).replace('Ignite', 'Dot');
-                const primaryRuneIcon = getRuneIcon(p.runes ? p.runes[0] : 0);
-                const secondaryRuneIcon = getRuneIcon(p.runes ? p.runes[1] : 0);
-                const r1Html = primaryRuneIcon ? `<img class="m-rune primary" src="${primaryRuneIcon}">` : `<div class="m-rune primary placeholder"></div>`;
-                const r2Html = secondaryRuneIcon ? `<img class="m-rune secondary" src="${secondaryRuneIcon}">` : `<div class="m-rune secondary placeholder"></div>`;
-
-                let lpHtml = '';
-                if (!isAram) {
-                    if (isRemake) lpHtml = `<br><span style="color: var(--color-subtexto); font-weight: bold; font-size: 0.8rem;">- LP</span>`;
-                    else if (p.lp_change === null || p.lp_change === undefined) lpHtml = `<br><span style="color: var(--color-subtexto); font-size: 0.8rem;">Calibrando PL...</span>`;
-                    else if (p.lp_change === 0) lpHtml = `<br><span style="color: var(--color-subtexto); font-weight: bold; font-size: 0.8rem;">0 LP</span>`;
-                    else {
-                        const lpSign = p.lp_change > 0 ? '+' : '';
-                        const lpClass = p.lp_change > 0 ? 'lp-gain' : 'lp-loss';
-                        lpHtml = `<br><span class="${lpClass}">${lpSign}${p.lp_change} LP</span>`;
-                    }
-                }
-
-                card.innerHTML = `
-                    <div class="m-info">
-                        <b style="color:${colorResultado}">${textoResultado}</b>
-                        <span style="color: var(--amarillo-pro); font-weight: bold; font-size: 0.75rem;">${p.queue_name}</span><br>
-                        ${p.fecha} • ${p.duracion}
-                        ${lpHtml}
-                    </div>
-                    <div class="m-champ-block">
-                        <div class="m-champ-img-container">
-                            <img class="main-champ" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${champFix(p.champ)}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'">
-                            <span class="m-lvl">${p.lvl}</span>
-                            ${posIcon ? `<div class="role-icon-container"><img src="${posIcon}" class="role-icon"></div>` : ''}
-                        </div>
-                        <div class="m-spells-runes">
-                            <div class="m-sr-col">
-                                <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${p.summoners ? fixSum(p.summoners[0]) : 'SummonerFlash'}.png">
-                                <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${p.summoners ? fixSum(p.summoners[1]) : 'SummonerDot'}.png">
-                            </div>
-                            <div class="m-sr-col">${r1Html}${r2Html}</div>
-                        </div>
-                    </div>
-                    <div class="m-stats">
-                        <div class="m-kda">${p.k} / <span style="color:#f25757">${p.d}</span> / ${p.a}</div>
-                        <div class="m-cs">${p.cs} CS</div>
-                    </div>
-                    <div class="m-items-container">
-                        <div class="m-items">${normalItems}</div>
-                        <div class="m-trinket-box">${trinketUrl ? `<img src="${trinketUrl}">` : ''}</div>
-                    </div>
-                    <div class="m-teams">
-                        <div class="team-col">${team1Html}</div>
-                        <div class="team-col">${team2Html}</div>
-                    </div>
-                `;
-                divPartidas.appendChild(card);
-
-                // Si es la última carta del paquete que trajimos, le metemos su banner de resumen
-                if (index === partidas.length - 1) {
-                    insertarBannerDiario(divPartidas, fechaCorta, balanceDelDia);
-                }
+                partidasPorDia[fechaCorta].matches.push(p);
+                partidasPorDia[fechaCorta].balance += (p.lp_change || 0); // Sumamos los puntos o 0 si es remake/calibrando
             });
+
+            // PASO 2: Dibujamos en la pantalla día por día (Cartel Primero, Cartas Después)
+            for (const [fecha, datosDia] of Object.entries(partidasPorDia)) {
+                
+                // 1. Insertamos el banner del día ARRIBA de las cartas
+                insertarBannerDiario(divPartidas, fecha, datosDia.balance);
+
+                // 2. Ahora sí, dibujamos las cartas de ese día
+                datosDia.matches.forEach((p) => {
+                    const isRemake = p.remake;
+                    const textoResultado = isRemake ? 'Remake' : (p.win ? 'Victoria' : 'Derrota');
+                    const colorResultado = isRemake ? '#9ca3af' : (p.win ? '#2add9c' : '#f25757');
+                    const card = document.createElement('div');
+                    card.className = `match-card ${isRemake ? 'remake' : (p.win ? 'win' : 'loss')}`;
+                    
+                    const generarEquipoHtml = (equipo) => equipo.map(pl => {
+                        const extraClass = pl.name === j.nombre ? 'me' : (esAmigo(pl.name) ? 'quesito' : '');
+                        return `<div class="player-row ${extraClass}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${champFix(pl.champ)}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'"><b>${pl.name}</b></div>`;
+                    }).join('');
+
+                    const team1Html = generarEquipoHtml(p.team1);
+                    const team2Html = generarEquipoHtml(p.team2);
+
+                    const normalItems = p.items.slice(0, 6).map(id => {
+                        const url = id > 0 ? `https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/item/${id}.png` : '';
+                        return `<div class="m-item-box">${url ? `<img src="${url}">` : ''}</div>`;
+                    }).join('');
+                    const trinketId = p.items[6];
+                    const trinketUrl = trinketId > 0 ? `https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/item/${trinketId}.png` : '';
+                    
+                    const pos = p.role ? p.role.toLowerCase() : 'none';
+                    const opggRoles = { 'middle': 'mid', 'jungle': 'jungle', 'bottom': 'adc', 'utility': 'support', 'top': 'top' };
+                    const matchOpggRole = opggRoles[pos];
+                    const posIcon = matchOpggRole && !isAram ? `https://s-lol-web.op.gg/images/icon/icon-position-${matchOpggRole}.svg` : '';
+                    
+                    const fixSum = (s) => String(s).replace('Ignite', 'Dot');
+                    const primaryRuneIcon = getRuneIcon(p.runes ? p.runes[0] : 0);
+                    const secondaryRuneIcon = getRuneIcon(p.runes ? p.runes[1] : 0);
+                    const r1Html = primaryRuneIcon ? `<img class="m-rune primary" src="${primaryRuneIcon}">` : `<div class="m-rune primary placeholder"></div>`;
+                    const r2Html = secondaryRuneIcon ? `<img class="m-rune secondary" src="${secondaryRuneIcon}">` : `<div class="m-rune secondary placeholder"></div>`;
+
+                    let lpHtml = '';
+                    if (!isAram) {
+                        if (isRemake) lpHtml = `<br><span style="color: var(--color-subtexto); font-weight: bold; font-size: 0.8rem;">- LP</span>`;
+                        else if (p.lp_change === null || p.lp_change === undefined) lpHtml = `<br><span style="color: var(--color-subtexto); font-size: 0.8rem;">Calibrando PL...</span>`;
+                        else if (p.lp_change === 0) lpHtml = `<br><span style="color: var(--color-subtexto); font-weight: bold; font-size: 0.8rem;">0 LP</span>`;
+                        else {
+                            const lpSign = p.lp_change > 0 ? '+' : '';
+                            const lpClass = p.lp_change > 0 ? 'lp-gain' : 'lp-loss';
+                            lpHtml = `<br><span class="${lpClass}">${lpSign}${p.lp_change} LP</span>`;
+                        }
+                    }
+
+                    card.innerHTML = `
+                        <div class="m-info">
+                            <b style="color:${colorResultado}">${textoResultado}</b>
+                            <span style="color: var(--amarillo-pro); font-weight: bold; font-size: 0.75rem;">${p.queue_name}</span><br>
+                            ${p.fecha} • ${p.duracion}
+                            ${lpHtml}
+                        </div>
+                        <div class="m-champ-block">
+                            <div class="m-champ-img-container">
+                                <img class="main-champ" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${champFix(p.champ)}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'">
+                                <span class="m-lvl">${p.lvl}</span>
+                                ${posIcon ? `<div class="role-icon-container"><img src="${posIcon}" class="role-icon"></div>` : ''}
+                            </div>
+                            <div class="m-spells-runes">
+                                <div class="m-sr-col">
+                                    <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${p.summoners ? fixSum(p.summoners[0]) : 'SummonerFlash'}.png">
+                                    <img class="m-spell" src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/spell/${p.summoners ? fixSum(p.summoners[1]) : 'SummonerDot'}.png">
+                                </div>
+                                <div class="m-sr-col">${r1Html}${r2Html}</div>
+                            </div>
+                        </div>
+                        <div class="m-stats">
+                            <div class="m-kda">${p.k} / <span style="color:#f25757">${p.d}</span> / ${p.a}</div>
+                            <div class="m-cs">${p.cs} CS</div>
+                        </div>
+                        <div class="m-items-container">
+                            <div class="m-items">${normalItems}</div>
+                            <div class="m-trinket-box">${trinketUrl ? `<img src="${trinketUrl}">` : ''}</div>
+                        </div>
+                        <div class="m-teams">
+                            <div class="team-col">${team1Html}</div>
+                            <div class="team-col">${team2Html}</div>
+                        </div>
+                    `;
+                    divPartidas.appendChild(card);
+                });
+            }
 
             // Si trajimos 10, probablemente haya más, así que creamos el botón al final
             if (partidas.length === 10) {
