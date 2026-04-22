@@ -495,21 +495,27 @@ function cargarPartidasScouter(j, offset) {
                     maestriasHtml = `<div style="display:flex; justify-content:center; align-items:flex-end; width:100%; padding: 10px 0;">${podioHtml}</div>`;
                 }
 
-                // CAMBIO 2: HEADER CON FOTO, NOMBRE, TAG Y RANGO
+                // CAMBIO 2: HEADER CON FOTO, NOMBRE, TAG Y RANGO (AHORA CON ESCUDO)
                 const iconId = j.profileIconId || 29;
                 const profileIconUrl = `https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/profileicon/${iconId}.png`;
-                const infoExtra = !isAram && j[modoActual].tier !== "UNRANKED" ? `${j[modoActual].tier} ${j[modoActual].rank} - ${j[modoActual].lp} LP` : (isAram ? 'Estadísticas Generales' : 'Unranked');
+                const tierActual = j[modoActual].tier;
+                const infoExtra = !isAram && tierActual !== "UNRANKED" ? `<span class="rank-${tierActual}" style="font-weight: 800;">${tierActual} ${j[modoActual].rank}</span> - ${j[modoActual].lp} LP` : (isAram ? 'Estadísticas Generales' : 'Unranked');
+                
+                // Obtenemos la imagen del escudo de Riot
+                const rankIconUrl = !isAram && tierActual !== "UNRANKED" ? `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-emblem/emblem-${tierActual.toLowerCase()}.png` : '';
+                const rankIconHtml = rankIconUrl ? `<img src="${rankIconUrl}" style="width: 55px; height: 55px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.4)); margin-left: auto;">` : '';
 
                 const headerHtml = `
                     <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 5px; background: #1c1f26; padding: 15px; border-radius: 10px; border: 1px solid #2d3748;">
                         <img src="${profileIconUrl}" style="width: 55px; height: 55px; border-radius: 50%; border: 2px solid var(--amarillo-pro); box-shadow: 0 0 10px rgba(212, 181, 92, 0.2);">
                         <div>
                             <div style="font-size: 1.25rem; font-weight: 900; color: white;">${j.nombre} <span style="color: gray; font-size: 0.9rem; font-weight: 500;">#${j.tag}</span></div>
-                            <div style="font-size: 0.8rem; color: var(--color-subtexto); margin-top: 3px;">
+                            <div style="font-size: 0.85rem; color: var(--color-subtexto); margin-top: 3px;">
                                 ${!j.is_main ? `<span style="color: var(--color-gold); font-weight: bold;">Smurf de ${j.propietario}</span> • ` : ''}
                                 ${infoExtra}
                             </div>
                         </div>
+                        ${rankIconHtml}
                     </div>
                 `;
 
