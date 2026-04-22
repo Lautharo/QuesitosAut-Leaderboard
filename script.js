@@ -519,7 +519,9 @@ function cargarPartidasScouter(j, offset) {
                 const infoExtra = !isAram && tierActual !== "UNRANKED" ? `<span class="rank-${tierActual}" style="font-weight: 800;">${tierActual} ${j[modoActual].rank}</span> - <span style="color:white">${j[modoActual].lp} LP</span>` : (isAram ? 'Estadísticas Generales' : 'Unranked');
                 
                 const rankIconUrl = !isAram && tierActual !== "UNRANKED" ? `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-emblem/emblem-${tierActual.toLowerCase()}.png` : '';
-                const rankIconHtml = rankIconUrl ? `<img src="${rankIconUrl}" style="width: 85px; height: 85px; object-fit: contain; filter: drop-shadow(0 0 12px rgba(0,0,0,0.4)); margin-left: auto; margin-right: -5px; transform: scale(1.15);">` : '';
+                
+                // FIX: Le metemos un scale(3.5) para saltarnos el fondo transparente de Riot y que el escudo se vea imponente
+                const rankIconHtml = rankIconUrl ? `<img src="${rankIconUrl}" style="width: 80px; height: 80px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.5)); margin-left: auto; margin-right: 10px; transform: scale(3.5); pointer-events: none;">` : '';
 
                 const headerHtml = `
                     <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 5px; background: #1c1f26; padding: 15px; border-radius: 10px; border: 1px solid #2d3748; overflow: hidden;">
