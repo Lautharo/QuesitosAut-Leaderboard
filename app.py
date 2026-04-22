@@ -35,6 +35,7 @@ SUMMONERS = {
 cache_leaderboard = {"datos": [], "ultima_actualizacion": 0}
 
 db_lock = threading.Lock()
+riot_api_lock = threading.Lock() # <-- NUEVO: Candado para el bot y el botón
 
 def log_error(mensaje):
     """Fuerza a Render a mostrar el error en consola al instante"""
@@ -198,35 +199,69 @@ def home():
 
 @app.route('/api/leaderboard')
 def get_leaderboard():
-    if time.time() - cache_leaderboard["ultima_actualizacion"] < 300 and cache_leaderboard["datos"]:
-        return jsonify({
-            "jugadores": cache_leaderboard["datos"],
-            "ultima_actualizacion": cache_leaderboard["ultima_actualizacion"]
-        })
-
-    # NUEVO: OBTENER JUGADORES DESDE SUPABASE
+    # LA PUERTA RÁPIDA: Solo lee Supabase
     try:
-        res_jugadores = supabase.table("jugadores").select("*").execute()
-        lista_jugadores = res_jugadores.data
+        res = supabase.table("cache_leaderboard_db").select("*").eq("id", 1).execute()
+        if res.data and res.data[0].get("datos"):
+            return jsonify({
+                "jugadores": res.data[0]["datos"],
+                "ultima_actualizacion": res.data[0]["ultima_actualizacion"]
+            })
     except Exception as e:
-        log_error(f"Error cargando jugadores: {e}")
-        lista_jugadores = []
-
-    arg_tz = pytz.timezone('America/Argentina/Buenos_Aires')
-
-    with ThreadPoolExecutor(max_workers=2) as executor:
-        # Ahora recorremos la lista de la base de datos
-        resultados = list(executor.map(lambda jug: procesar_jugador(jug, arg_tz), lista_jugadores))
+        log_error(f"Error leyendo cache rápida: {e}")
     
-    datos_finales = [res for res in resultados if res is not None]
+    return jsonify({"jugadores": [], "ultima_actualizacion": 0})
 
-    cache_leaderboard["datos"] = datos_finales
-    cache_leaderboard["ultima_actualizacion"] = time.time()
+@app.route('/api/update')
+def force_update():
+    global cache_leaderboard
     
-    return jsonify({
-        "jugadores": datos_finales,
-        "ultima_actualizacion": cache_leaderboard["ultima_actualizacion"]
-    })
+    # 1. ESCUDO ANTI-COLISIONES: Si alguien (bot o humano) ya está actualizando, rebotamos.
+    if not riot_api_lock.acquire(blocking=False):
+        log_error("Colisión evitada: El servidor ya estaba actualizando. Devolviendo caché.")
+        return get_leaderboard()
+
+    try:
+        # 2. ESCUDO DE TIEMPO: Si se actualizó hace menos de 2 minutos, no molestamos a Riot
+        ahora = time.time()
+        if ahora - cache_leaderboard.get("ultima_actualizacion", 0) < 120:
+            return get_leaderboard()
+
+        # --- TRABAJO PESADO ---
+        try:
+            res_jugadores = supabase.table("jugadores").select("*").execute()
+            lista_jugadores = res_jugadores.data
+        except Exception as e:
+            log_error(f"Error cargando jugadores: {e}")
+            lista_jugadores = []
+
+        arg_tz = pytz.timezone('America/Argentina/Buenos_Aires')
+
+        with ThreadPoolExecutor(max_workers=2) as executor:
+            resultados = list(executor.map(lambda jug: procesar_jugador(jug, arg_tz), lista_jugadores))
+        
+        datos_finales = [res for res in resultados if res is not None]
+        ahora_fin = time.time()
+
+        # Guarda la foto en Supabase para la puerta rápida
+        try:
+            supabase.table("cache_leaderboard_db").update({
+                "datos": datos_finales,
+                "ultima_actualizacion": ahora_fin
+            }).eq("id", 1).execute()
+        except Exception as e:
+            log_error(f"Error guardando cache: {e}")
+            
+        cache_leaderboard["ultima_actualizacion"] = ahora_fin
+        cache_leaderboard["datos"] = datos_finales
+        
+        return jsonify({
+            "jugadores": datos_finales,
+            "ultima_actualizacion": ahora_fin
+        })
+    finally:
+        # 3. Soltamos la llave al terminar
+        riot_api_lock.release()
 
 @app.route('/api/jugadores', methods=['POST'])
 def add_jugador():

@@ -87,9 +87,12 @@ function cerrarAviso() {
 
 function cambiarModo(modo) {
     modoActual = modo;
+    
+    // NUEVO: Cambia la URL en el navegador sin recargar (ej: /#flex)
+    window.history.pushState(null, '', '#' + modo);
+
     document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
     document.getElementById(`btn-${modo}`).classList.add('active');
-    
     if (modo === 'aram') {
         document.getElementById('aram-aviso').style.display = 'block';
     } else {
@@ -696,36 +699,62 @@ function iniciarCooldown(ultimaAct) {
 function forzarActualizacion() {
     const btn = document.getElementById('btn-actualizar');
     btn.disabled = true;
-    btn.textContent = "Actualizando...";
+    btn.textContent = "Actualizando con Riot...";
     
-    // Llamamos de nuevo a la función base para que pida los datos y active la animación
-    iniciarLeaderboard();
+    document.getElementById('update-time').textContent = "CALCULANDO NUEVOS PUNTOS..."; 
+    document.getElementById('pantalla-carga').style.display = 'flex';
+    document.getElementById('pantalla-carga').style.opacity = '1';
+
+    // LLAMA A LA PUERTA PESADA (/api/update)
+    fetch(`${API_URL}/api/update`)
+        .then(res => res.json())
+        .then(d => { 
+            if (d.jugadores && d.jugadores.length > 0) datosGlobales = d.jugadores; 
+            document.getElementById('update-time').textContent = "LEADERBOARD ONLINE"; 
+            
+            document.getElementById('pantalla-carga').style.opacity = '0'; 
+            setTimeout(() => document.getElementById('pantalla-carga').style.display = 'none', 500);
+            
+            poblarFiltros();
+            cambiarModo(modoActual); 
+            if(d.ultima_actualizacion > 0) iniciarCooldown(d.ultima_actualizacion); 
+        })
+        .catch(() => {
+            alert("Error al actualizar los datos con Riot.");
+            btn.disabled = false;
+            btn.textContent = "Actualizar";
+            document.getElementById('pantalla-carga').style.opacity = '0'; 
+            setTimeout(() => document.getElementById('pantalla-carga').style.display = 'none', 500);
+        });
 }
 
-// --- FUNCIÓN MODIFICADA PARA LA PANTALLA DE CARGA ---
 function iniciarLeaderboard() {
-    document.getElementById('update-time').textContent = "DESPERTANDO SERVIDOR..."; 
-    document.getElementById('pantalla-carga').style.display = 'flex'; // Prende la animación de carga
+    // Lee la URL por si alguien te pasó un link directo tipo /#aram
+    const hash = window.location.hash.replace('#', '');
+    if (['soloq', 'flex', 'aram'].includes(hash)) {
+        modoActual = hash;
+    }
+
+    document.getElementById('update-time').textContent = "OBTENIENDO DATOS RÁPIDOS..."; 
+    document.getElementById('pantalla-carga').style.display = 'flex'; 
     document.getElementById('pantalla-carga').style.opacity = '1';
     
+    // LLAMA A LA PUERTA RÁPIDA (/api/leaderboard)
     fetch(`${API_URL}/api/leaderboard`)
         .then(res => res.json())
         .then(d => { 
-            // OJO ACÁ: Ahora el backend devuelve un objeto con "jugadores" y "ultima_actualizacion"
-            datosGlobales = d.jugadores; 
+            if (d.jugadores && d.jugadores.length > 0) datosGlobales = d.jugadores; 
             
             document.getElementById('update-time').textContent = "LEADERBOARD ONLINE"; 
             cerrarAviso(); 
             
-            // Apaga la pantalla de carga suavemente
             document.getElementById('pantalla-carga').style.opacity = '0'; 
             setTimeout(() => document.getElementById('pantalla-carga').style.display = 'none', 500);
             
             poblarFiltros();
             cambiarModo(modoActual); 
             
-            // Le pasamos el tiempo exacto en el que el servidor se actualizó para arrancar el reloj
-            iniciarCooldown(d.ultima_actualizacion); 
+            if(d.ultima_actualizacion > 0) iniciarCooldown(d.ultima_actualizacion); 
         })
         .catch(() => {
             document.getElementById('update-time').textContent = "SIN DATOS - ESPERA A RENDER";
