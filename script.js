@@ -872,25 +872,24 @@ function cerrarModal() {
 
 // --- OBTENER VERSIÓN AUTOMÁTICA DE GITHUB ---
 function obtenerVersionGithub() {
-    // Le preguntamos a la API de GitHub por el último cambio en tu repositorio
     fetch("https://api.github.com/repos/lautharo/QuesitosAut-Leaderboard/commits/main")
         .then(res => res.json())
         .then(data => {
             if (data && data.sha) {
-                // Sacamos los primeros 7 caracteres del código de subida (Commit Hash)
+                // Sacamos los 7 caracteres del código de subida (ej: 02ffed7)
                 const commitCorto = data.sha.substring(0, 7);
                 
-                // Buscamos el texto base que pusiste en el HTML
-                const versionBase = document.getElementById('version-github').textContent;
+                // Sacamos exactamente el nombre que le pusiste a la subida en GitHub (ej: 1.14.5a1a)
+                // Usamos split('\n')[0] por si le pusiste alguna descripción extra abajo, para que solo tome el título
+                const mensajeCommit = data.commit.message.split('\n')[0]; 
                 
-                // Lo actualizamos sumándole el código automático de GitHub
-                document.getElementById('version-github').textContent = `${versionBase} (Build ${commitCorto})`;
+                // Reemplazamos todo el texto con tu nombre de versión + el código
+                document.getElementById('version-github').textContent = `v${mensajeCommit} (Build ${commitCorto})`;
             }
         })
         .catch(err => console.log("No se pudo cargar el build de GitHub"));
 }
 
-// Ejecutamos la función apenas cargue el código
 obtenerVersionGithub();
 
 function guardarNuevaCuenta() {
