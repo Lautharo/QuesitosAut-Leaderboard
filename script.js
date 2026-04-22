@@ -313,7 +313,7 @@ function actualizarGrafica() {
                 x: {
                     type: 'linear',
                     min: 0,
-                    max: maxPartidas - 1,
+                    max: maxPartidas > 1 ? maxPartidas - 1 : 1, // <--- ESTA ES LA MAGIA: Si hay 1 solo punto, fuerza el gráfico a mostrarlo
                     grid: { color: 'rgba(255, 255, 255, 0.05)' },
                     ticks: { display: false } 
                 }
