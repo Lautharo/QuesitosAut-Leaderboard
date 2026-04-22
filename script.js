@@ -308,6 +308,7 @@ function actualizarGrafica() {
                         duration: 0
                     }
                 }
+            },
             interaction: { mode: 'nearest', intersect: false },
             scales: {
                 y: {
