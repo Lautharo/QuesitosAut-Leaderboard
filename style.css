@@ -786,3 +786,30 @@ h1 {
     color: #ffffff;
     font-weight: 500;
 }
+
+/* --- AMIGOS EN EL HISTORIAL --- */
+.player-row.quesito b {
+	color: #4bcaeb; /* Celeste clarito que resalta pero no opaca al dorado principal */
+	font-weight: 700;
+}
+
+/* --- BOTÓN CARGAR MÁS PARTIDAS --- */
+.btn-cargar-mas {
+	width: 100%;
+	background: #1a202c;
+	color: var(--amarillo-pro);
+	border: 1px dashed var(--amarillo-pro);
+	padding: 15px;
+	border-radius: 8px;
+	font-weight: bold;
+	font-size: 0.9rem;
+	cursor: pointer;
+	margin-top: 15px;
+	transition: 0.3s;
+}
+
+	.btn-cargar-mas:hover {
+		background: var(--amarillo-pro);
+		color: #000;
+		border-style: solid;
+	}

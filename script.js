@@ -362,179 +362,205 @@ function getRuneIcon(id) {
     return '';
 }
 
+let scouterOffset = 0; // Guardamos por qué página vamos
+
 function mostrarScouter(j) {
+    scouterOffset = 0; // Reseteamos al buscar a alguien nuevo
     const scouterSection = document.getElementById('seccion-scouter');
     const panelStats = document.getElementById('panel-estadisticas'); 
+    const lista = document.getElementById('lista-partidas');
     
     scouterSection.style.display = 'block';
     scouterSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     
-    const lista = document.getElementById('lista-partidas');
-    const isAram = modoActual === 'aram';
-    
     document.getElementById('scouter-nombre').textContent = `SCOUTER: ${j.nombre} (Buscando...)`;
     lista.innerHTML = '<div style="color:var(--amarillo-pro); text-align:center; padding: 20px;">Analizando historial en tiempo real...</div>';
-    
     panelStats.innerHTML = '<div style="color:var(--amarillo-pro); text-align:center; width: 100%;">Cargando datos del jugador...</div>'; 
 
-    fetch(`${API_URL}/api/scouter/${j.puuid}/${modoActual}`)
+    cargarPartidasScouter(j, 0); // Cargamos la primera página
+}
+
+function cargarPartidasScouter(j, offset) {
+    const isAram = modoActual === 'aram';
+    const lista = document.getElementById('lista-partidas');
+    const panelStats = document.getElementById('panel-estadisticas');
+    
+    // Si estamos cargando más, avisamos en el botón
+    if (offset > 0) {
+        const btn = document.getElementById('btn-cargar-mas');
+        if (btn) btn.textContent = "Cargando partidas...";
+    }
+
+    fetch(`${API_URL}/api/scouter/${j.puuid}/${modoActual}/${offset}`)
         .then(res => res.json())
         .then(data => {
-            document.getElementById('scouter-nombre').textContent = `SCOUTER: ${j.nombre}`;
-            lista.innerHTML = ''; 
-
             const partidas = data.partidas || [];
             const maestrias = data.maestrias || [];
 
-            if (partidas.length === 0) {
-                lista.innerHTML = '<div style="color:gray; text-align:center; padding:20px;">No se encontraron partidas recientes en este modo.</div>';
-                return;
+            if (offset === 0) {
+                document.getElementById('scouter-nombre').textContent = `SCOUTER: ${j.nombre}`;
+                lista.innerHTML = ''; 
+                if (partidas.length === 0) {
+                    lista.innerHTML = '<div style="color:gray; text-align:center; padding:20px;">No se encontraron partidas.</div>';
+                    return;
+                }
+            } else {
+                // Removemos el botón viejo para ponerlo al fondo después
+                const btnViejo = document.getElementById('btn-cargar-mas');
+                if (btnViejo) btnViejo.remove();
+                if (partidas.length === 0) return; // Si no hay más, no hace nada
             }
 
-            let tk = 0, td = 0, ta = 0, twins = 0;
-            let rolesCount = {};
-            let compañeros = {}; // Para calcular el Dúo
-            
-            partidas.forEach(p => {
-                tk += p.k; td += p.d; ta += p.a;
-                if (p.win) twins++;
+            // --- ESTADÍSTICAS GLOBALES PARA EL PANEL (Solo las calculamos en la primera carga) ---
+            if (offset === 0) {
+                let tk = 0, td = 0, ta = 0, twins = 0;
+                let rolesCount = {};
+                let compañeros = {}; 
+                const champFix = (cName) => cName === 'FiddleSticks' ? 'Fiddlesticks' : cName;
+
+                // Sacamos los últimos campeones para la caja extra
+                const ultimosChampsHtml = partidas.map(p => `<img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${champFix(p.champ)}.png" style="width:28px; height:28px; border-radius:50%; border: 1px solid #2d3748;" title="${p.champ}">`).join('');
                 
-                let r = p.role || 'none';
-                if (r !== 'none' && r !== 'ARAM' && !isAram) {
-                    rolesCount[r] = (rolesCount[r] || 0) + 1;
-                }
-
-                // Analizar con quién jugó (Dúo)
-                const miEquipo = p.team1.some(jug => jug.name === j.nombre) ? p.team1 : p.team2;
-                miEquipo.forEach(jug => {
-                    if (jug.name !== j.nombre) {
-                        compañeros[jug.name] = (compañeros[jug.name] || 0) + 1;
-                    }
-                });
-            });
-
-            const kdaNum = td === 0 ? "Perfecto" : ((tk + ta) / td).toFixed(2);
-            const wrNum = Math.round((twins / partidas.length) * 100);
-            
-            // FIX ICONOS: Traductor de Riot a OP.GG
-            const opggRoles = { 'middle': 'mid', 'jungle': 'jungle', 'bottom': 'adc', 'utility': 'support', 'top': 'top' };
-            const roleMappingText = { 'middle': 'Mid', 'jungle': 'Jungla', 'bottom': 'ADC', 'utility': 'Support', 'top': 'Top' };
-            
-            const favRoleKey = Object.keys(rolesCount).length > 0 ? Object.keys(rolesCount).reduce((a, b) => rolesCount[a] > rolesCount[b] ? a : b) : null;
-            const favRole = favRoleKey ? roleMappingText[favRoleKey.toLowerCase()] : (isAram ? 'ARAM' : 'Polivalente');
-
-            // FIX 1: Icono de Línea Favorita
-            const opggRoleKey = favRoleKey ? opggRoles[favRoleKey.toLowerCase()] : null;
-            const roleIconSvg = opggRoleKey && !isAram 
-                ? `<img src="https://s-lol-web.op.gg/images/icon/icon-position-${opggRoleKey}.svg" style="width:16px; vertical-align: middle; margin-left: 6px; filter: drop-shadow(0 0 2px rgba(0,0,0,0.8));">` 
-                : '';
-
-            // LÓGICA NUEVA: Calcular el Mejor Dúo
-            let mejorDuo = "Lobo Solitario";
-            let maxPartidasDuo = 0;
-            for (const [nom, cant] of Object.entries(compañeros)) {
-                if (cant > maxPartidasDuo && cant >= 2) { 
-                    mejorDuo = nom;
-                    maxPartidasDuo = cant;
-                }
-            }
-
-            // LÓGICA NUEVA: Generar Historial Visual y Tag
-            const rachaHtml = partidas.map(p => 
-                p.win ? `<span style="color:#2add9c; font-size:1rem; margin:0 1px;">●</span>` 
-                      : `<span style="color:#f25757; font-size:1rem; margin:0 1px;">●</span>`
-            ).join('');
-
-            let tagVibe = "";
-            if (kdaNum >= 3.5) tagVibe = '<span style="background:rgba(42, 221, 156, 0.2); color:#2add9c; padding:4px 8px; border-radius:4px; font-weight:bold;">🏆 1v9 Machine</span>';
-            else if (kdaNum <= 1.5) tagVibe = '<span style="background:rgba(242, 87, 87, 0.2); color:#f25757; padding:4px 8px; border-radius:4px; font-weight:bold;">🗑️ Ta trolleando</span>';
-            else if (wrNum >= 60) tagVibe = '<span style="background:rgba(212, 181, 92, 0.2); color:var(--color-gold); padding:4px 8px; border-radius:4px; font-weight:bold;">📈 En Racha</span>';
-            else tagVibe = '<span style="background:#2d3748; color:white; padding:4px 8px; border-radius:4px; font-weight:bold;">⚖️ Balanceado</span>';
-
-            // GENERAR HTML DE MAESTRÍAS
-            let maestriasHtml = '';
-            if (maestrias.length > 0) {
-                const ordenIndices = [1, 0, 2]; 
-                let podioHtml = '';
-                ordenIndices.forEach(idx => {
-                    if (maestrias[idx]) {
-                        const m = maestrias[idx];
-                        const isTop1 = idx === 0;
-                        const size = isTop1 ? '70px' : '50px';
-                        const borderColor = isTop1 ? '#d4b55c' : (idx === 1 ? '#a0a0a0' : '#cd7f32'); 
-                        const orderCSS = isTop1 ? 2 : (idx === 1 ? 1 : 3);
-                        const champFixMast = m.championId === 'FiddleSticks' ? 'Fiddlesticks' : m.championId; // FIX 3.1
-                        
-                        podioHtml += `
-                            <div style="display:flex; flex-direction:column; align-items:center; margin: 0 10px; order: ${orderCSS};">
-                                <div style="position: relative;">
-                                    <img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/${champFixMast}.png" 
-                                         style="width:${size}; height:${size}; border-radius:50%; border:3px solid ${borderColor}; box-shadow: 0 0 15px ${borderColor}40; object-fit: cover;">
-                                    ${isTop1 ? '<div style="position:absolute; top:-10px; left:50%; transform:translateX(-50%); font-size:1.2rem;">👑</div>' : ''}
-                                </div>
-                                <b style="color:white; font-size: ${isTop1 ? '0.9rem' : '0.8rem'}; margin-top: 5px;">Lvl ${m.championLevel}</b>
-                                <small style="color:var(--color-subtexto); font-size:0.7rem;">${(m.championPoints/1000).toFixed(1)}k</small>
-                            </div>
-                        `;
-                    }
-                });
-                maestriasHtml = `<div style="display:flex; justify-content:center; align-items:flex-end; width:100%; padding: 10px 0;">${podioHtml}</div>`;
-            }
-
-            // INYECTAR LAS 3 CAJAS ARRIBA
-            panelStats.innerHTML = `
-                <div class="scouter-stats-container">
-                    <div class="stat-box" style="border-left-color: ${kdaNum >= 3 ? 'var(--color-emerald)' : '#f25757'}">
-                        <span style="color:var(--color-subtexto); font-size:0.8rem; font-weight:bold; text-transform:uppercase;">🔥 Desempeño (Últimas ${partidas.length})</span><br>
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
-                            <div>
-                                <div style="font-size:2rem; font-weight:900; color:white; line-height: 1;">${kdaNum} KDA</div>
-                                <span style="color:var(--color-gold); font-size:0.85rem;">${tk} / ${td} / ${ta} en total</span>
-                            </div>
-                            <div style="text-align: right;">
-                                <div class="role-badge" style="background: ${wrNum >= 50 ? 'rgba(42, 221, 156, 0.2)' : 'rgba(242, 87, 87, 0.2)'}; color: ${wrNum >= 50 ? 'var(--color-emerald)' : '#f25757'}; margin-bottom: 5px;">WR: ${wrNum}%</div><br>
-                                <div class="role-badge" style="margin: 0; display: inline-flex; align-items: center;">Línea Fav: ${favRole} ${roleIconSvg}</div>
-                            </div>
-                        </div>
-                    </div>
+                partidas.forEach(p => {
+                    tk += p.k; td += p.d; ta += p.a;
+                    if (p.win) twins++;
                     
-                    <div class="stat-box" style="border-left-color: var(--amarillo-pro)">
-                        <span style="color:var(--color-subtexto); font-size:0.8rem; font-weight:bold; text-transform:uppercase; display:block; text-align:center; margin-bottom: 10px;">🏆 Campeones Más Jugados</span>
-                        ${maestriasHtml || '<div style="color:gray; font-size:0.9rem; text-align:center;">Sin datos de maestría.</div>'}
-                    </div>
+                    let r = p.role || 'none';
+                    if (r !== 'none' && r !== 'ARAM' && !isAram) rolesCount[r] = (rolesCount[r] || 0) + 1;
 
-                    <div class="stat-box" style="border-left-color: #5765f2">
-                        <span style="color:var(--color-subtexto); font-size:0.8rem; font-weight:bold; text-transform:uppercase; display:block; margin-bottom: 8px;">📊 Radar de Quesito</span>
-                        <div style="display: flex; flex-direction: column; gap: 8px;">
-                            <div style="display:flex; justify-content: space-between; align-items:center;">
-                                <span style="color:white; font-size:0.9rem;">Forma Reciente:</span>
-                                <div>${rachaHtml}</div>
+                    const miEquipo = p.team1.some(jug => jug.name === j.nombre) ? p.team1 : p.team2;
+                    miEquipo.forEach(jug => {
+                        if (jug.name !== j.nombre) compañeros[jug.name] = (compañeros[jug.name] || 0) + 1;
+                    });
+                });
+
+                const kdaNum = td === 0 ? "Perfecto" : ((tk + ta) / td).toFixed(2);
+                const wrNum = Math.round((twins / partidas.length) * 100);
+                
+                const opggRoles = { 'middle': 'mid', 'jungle': 'jungle', 'bottom': 'adc', 'utility': 'support', 'top': 'top' };
+                const roleMappingText = { 'middle': 'Mid', 'jungle': 'Jungla', 'bottom': 'ADC', 'utility': 'Support', 'top': 'Top' };
+                
+                const favRoleKey = Object.keys(rolesCount).length > 0 ? Object.keys(rolesCount).reduce((a, b) => rolesCount[a] > rolesCount[b] ? a : b) : null;
+                const favRole = favRoleKey ? roleMappingText[favRoleKey.toLowerCase()] : (isAram ? 'ARAM' : 'Polivalente');
+
+                const opggRoleKey = favRoleKey ? opggRoles[favRoleKey.toLowerCase()] : null;
+                const roleIconSvg = opggRoleKey && !isAram ? `<img src="https://s-lol-web.op.gg/images/icon/icon-position-${opggRoleKey}.svg" style="width:16px; vertical-align: middle; margin-left: 6px; filter: drop-shadow(0 0 2px rgba(0,0,0,0.8));">` : '';
+
+                let mejorDuo = "Lobo Solitario";
+                let maxPartidasDuo = 0;
+                for (const [nom, cant] of Object.entries(compañeros)) {
+                    if (cant > maxPartidasDuo && cant >= 2) { 
+                        mejorDuo = nom;
+                        maxPartidasDuo = cant;
+                    }
+                }
+
+                const rachaHtml = partidas.map(p => p.win ? `<span style="color:#2add9c; font-size:1rem; margin:0 1px;">●</span>` : `<span style="color:#f25757; font-size:1rem; margin:0 1px;">●</span>`).join('');
+
+                // --- HUMOR NEGRO (EL NUEVO "ESTADO") ---
+                let tagVibe = "";
+                if (kdaNum >= 3.5 && wrNum >= 60) tagVibe = '<span style="background:rgba(42, 221, 156, 0.2); color:#2add9c; padding:4px 8px; border-radius:4px; font-weight:bold;">🗿 Carreador de Autistas</span>';
+                else if (kdaNum <= 1.0) tagVibe = '<span style="background:rgba(242, 87, 87, 0.2); color:#f25757; padding:4px 8px; border-radius:4px; font-weight:bold;">💩 Malo de Mierda</span>';
+                else if (td >= 10) tagVibe = '<span style="background:rgba(242, 87, 87, 0.2); color:#f25757; padding:4px 8px; border-radius:4px; font-weight:bold;">💣 Terrorista Aliado</span>';
+                else if (wrNum <= 30) tagVibe = '<span style="background:rgba(242, 87, 87, 0.2); color:#f25757; padding:4px 8px; border-radius:4px; font-weight:bold;">♿ Free Elo Móvil</span>';
+                else if (kdaNum < 2.0 && wrNum >= 60) tagVibe = '<span style="background:rgba(212, 181, 92, 0.2); color:var(--color-gold); padding:4px 8px; border-radius:4px; font-weight:bold;">🚌 Pasajero VIP (Carreado)</span>';
+                else if (wrNum >= 60) tagVibe = '<span style="background:rgba(212, 181, 92, 0.2); color:var(--color-gold); padding:4px 8px; border-radius:4px; font-weight:bold;">📈 Farmeando LP</span>';
+                else tagVibe = '<span style="background:#2d3748; color:white; padding:4px 8px; border-radius:4px; font-weight:bold;">🤷‍♂️ Rellenando Partidas</span>';
+
+                let maestriasHtml = '';
+                if (maestrias.length > 0) {
+                    const ordenIndices = [1, 0, 2]; 
+                    let podioHtml = '';
+                    ordenIndices.forEach(idx => {
+                        if (maestrias[idx]) {
+                            const m = maestrias[idx];
+                            const isTop1 = idx === 0;
+                            const size = isTop1 ? '70px' : '50px';
+                            const borderColor = isTop1 ? '#d4b55c' : (idx === 1 ? '#a0a0a0' : '#cd7f32'); 
+                            const orderCSS = isTop1 ? 2 : (idx === 1 ? 1 : 3);
+                            podioHtml += `
+                                <div style="display:flex; flex-direction:column; align-items:center; margin: 0 10px; order: ${orderCSS};">
+                                    <div style="position: relative;">
+                                        <img src="https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/${champFix(m.championId)}.png" 
+                                             style="width:${size}; height:${size}; border-radius:50%; border:3px solid ${borderColor}; box-shadow: 0 0 15px ${borderColor}40; object-fit: cover;">
+                                        ${isTop1 ? '<div style="position:absolute; top:-10px; left:50%; transform:translateX(-50%); font-size:1.2rem;">👑</div>' : ''}
+                                    </div>
+                                    <b style="color:white; font-size: ${isTop1 ? '0.9rem' : '0.8rem'}; margin-top: 5px;">Lvl ${m.championLevel}</b>
+                                    <small style="color:var(--color-subtexto); font-size:0.7rem;">${(m.championPoints/1000).toFixed(1)}k</small>
+                                </div>
+                            `;
+                        }
+                    });
+                    maestriasHtml = `<div style="display:flex; justify-content:center; align-items:flex-end; width:100%; padding: 10px 0;">${podioHtml}</div>`;
+                }
+
+                // NUEVO: Agregamos el div extra para los 10 últimos champs
+                panelStats.innerHTML = `
+                    <div class="scouter-stats-container">
+                        <div class="stat-box" style="border-left-color: ${kdaNum >= 3 ? 'var(--color-emerald)' : '#f25757'}">
+                            <span style="color:var(--color-subtexto); font-size:0.8rem; font-weight:bold; text-transform:uppercase;">🔥 Desempeño (Últimas ${partidas.length})</span><br>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 5px;">
+                                <div>
+                                    <div style="font-size:2rem; font-weight:900; color:white; line-height: 1;">${kdaNum} KDA</div>
+                                    <span style="color:var(--color-gold); font-size:0.85rem;">${tk} / ${td} / ${ta} en total</span>
+                                </div>
+                                <div style="text-align: right;">
+                                    <div class="role-badge" style="background: ${wrNum >= 50 ? 'rgba(42, 221, 156, 0.2)' : 'rgba(242, 87, 87, 0.2)'}; color: ${wrNum >= 50 ? 'var(--color-emerald)' : '#f25757'}; margin-bottom: 5px;">WR: ${wrNum}%</div><br>
+                                    <div class="role-badge" style="margin: 0; display: inline-flex; align-items: center;">Línea Fav: ${favRole} ${roleIconSvg}</div>
+                                </div>
                             </div>
-                            <div style="display:flex; justify-content: space-between; align-items:center;">
-                                <span style="color:white; font-size:0.9rem;">Mejor Dúo:</span>
-                                <b style="color:var(--color-gold); font-size:0.9rem;">${mejorDuo}</b>
+                        </div>
+                        
+                        <div class="stat-box" style="border-left-color: var(--amarillo-pro)">
+                            <span style="color:var(--color-subtexto); font-size:0.8rem; font-weight:bold; text-transform:uppercase; display:block; text-align:center; margin-bottom: 10px;">🏆 Campeones Más Jugados</span>
+                            ${maestriasHtml || '<div style="color:gray; font-size:0.9rem; text-align:center;">Sin datos de maestría.</div>'}
+                        </div>
+
+                        <div class="stat-box" style="border-left-color: #5765f2">
+                            <span style="color:var(--color-subtexto); font-size:0.8rem; font-weight:bold; text-transform:uppercase; display:block; margin-bottom: 8px;">📊 Radar de Quesito</span>
+                            <div style="display: flex; flex-direction: column; gap: 8px;">
+                                <div style="display:flex; justify-content: space-between; align-items:center;">
+                                    <span style="color:white; font-size:0.9rem;">Forma Reciente:</span>
+                                    <div>${rachaHtml}</div>
+                                </div>
+                                <div style="display:flex; justify-content: space-between; align-items:center;">
+                                    <span style="color:white; font-size:0.9rem;">Mejor Dúo:</span>
+                                    <b style="color:var(--color-gold); font-size:0.9rem;">${mejorDuo}</b>
+                                </div>
+                                <div style="display:flex; justify-content: space-between; align-items:center; margin-top: 5px;">
+                                    <span style="color:white; font-size:0.9rem;">Estado:</span>
+                                    ${tagVibe}
+                                </div>
                             </div>
-                            <div style="display:flex; justify-content: space-between; align-items:center; margin-top: 5px;">
-                                <span style="color:white; font-size:0.9rem;">Estado:</span>
-                                ${tagVibe}
+                        </div>
+
+                        <div class="stat-box" style="border-left-color: #4bcaeb; padding: 10px 15px;">
+                            <span style="color:var(--color-subtexto); font-size:0.75rem; font-weight:bold; text-transform:uppercase; display:block; margin-bottom: 6px;">🎮 Selecciones Recientes</span>
+                            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                                ${ultimosChampsHtml}
                             </div>
                         </div>
                     </div>
-                </div>
-            `;
-            
-            const divPartidas = document.createElement('div');
-            lista.appendChild(divPartidas);
+                `;
+            }
+
+            // --- INYECCIÓN DE CARTAS DE PARTIDAS ---
+            const divPartidas = offset === 0 ? document.createElement('div') : lista.querySelector('.contenedor-partidas-append');
+            if (offset === 0) {
+                divPartidas.className = "contenedor-partidas-append";
+                lista.appendChild(divPartidas);
+            }
 
             let ultimaFechaVista = "";
             let balanceDelDia = 0;
-
-            // FIX 3: Helper para el nombre de Fiddlesticks
             const champFix = (cName) => cName === 'FiddleSticks' ? 'Fiddlesticks' : cName;
+            
+            // MAGIA 3: Preparamos la lista de nombres para detectar amigos en la partida
+            const nombresAmigos = datosGlobales.map(x => x.nombre.toLowerCase());
+            const esAmigo = (nombre) => nombresAmigos.includes(nombre.toLowerCase()) && nombre.toLowerCase() !== j.nombre.toLowerCase();
 
             partidas.forEach((p, index) => {
                 const fechaCorta = p.fecha.split(' ')[0]; 
-
                 if (ultimaFechaVista !== "" && ultimaFechaVista !== fechaCorta) {
                     insertarBannerDiario(divPartidas, ultimaFechaVista, balanceDelDia);
                     balanceDelDia = 0; 
@@ -543,16 +569,21 @@ function mostrarScouter(j) {
                 ultimaFechaVista = fechaCorta;
                 balanceDelDia += p.lp_change;
 
-                // --- LÓGICA DE REMAKE ---
                 const isRemake = p.remake;
                 const textoResultado = isRemake ? 'Remake' : (p.win ? 'Victoria' : 'Derrota');
                 const colorResultado = isRemake ? '#9ca3af' : (p.win ? '#2add9c' : '#f25757');
-
                 const card = document.createElement('div');
                 card.className = `match-card ${isRemake ? 'remake' : (p.win ? 'win' : 'loss')}`;
                 
-                const team1 = p.team1.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${champFix(pl.champ)}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'"><b>${pl.name}</b></div>`).join('');
-                const team2 = p.team2.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${champFix(pl.champ)}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'"><b>${pl.name}</b></div>`).join('');
+                // Aplicamos la clase 'quesito' a los amigos que estén en nuestra base de datos
+                const generarEquipoHtml = (equipo) => equipo.map(pl => {
+                    const extraClass = pl.name === j.nombre ? 'me' : (esAmigo(pl.name) ? 'quesito' : '');
+                    return `<div class="player-row ${extraClass}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${champFix(pl.champ)}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'"><b>${pl.name}</b></div>`;
+                }).join('');
+
+                const team1Html = generarEquipoHtml(p.team1);
+                const team2Html = generarEquipoHtml(p.team2);
+
                 const normalItems = p.items.slice(0, 6).map(id => {
                     const url = id > 0 ? `https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/item/${id}.png` : '';
                     return `<div class="m-item-box">${url ? `<img src="${url}">` : ''}</div>`;
@@ -560,8 +591,8 @@ function mostrarScouter(j) {
                 const trinketId = p.items[6];
                 const trinketUrl = trinketId > 0 ? `https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/item/${trinketId}.png` : '';
                 
-                // FIX 2: Icono de Rol en las Partidas
                 const pos = p.role ? p.role.toLowerCase() : 'none';
+                const opggRoles = { 'middle': 'mid', 'jungle': 'jungle', 'bottom': 'adc', 'utility': 'support', 'top': 'top' };
                 const matchOpggRole = opggRoles[pos];
                 const posIcon = matchOpggRole && !isAram ? `https://s-lol-web.op.gg/images/icon/icon-position-${matchOpggRole}.svg` : '';
                 
@@ -573,13 +604,10 @@ function mostrarScouter(j) {
 
                 let lpHtml = '';
                 if (!isAram) {
-                    if (isRemake) {
-                        lpHtml = `<br><span style="color: var(--color-subtexto); font-weight: bold; font-size: 0.8rem;">- LP</span>`;
-                    } else if (p.lp_change === null || p.lp_change === undefined) {
-                        lpHtml = `<br><span style="color: var(--color-subtexto); font-size: 0.8rem;">Calibrando PL...</span>`;
-                    } else if (p.lp_change === 0) {
-                        lpHtml = `<br><span style="color: var(--color-subtexto); font-weight: bold; font-size: 0.8rem;">0 LP</span>`;
-                    } else {
+                    if (isRemake) lpHtml = `<br><span style="color: var(--color-subtexto); font-weight: bold; font-size: 0.8rem;">- LP</span>`;
+                    else if (p.lp_change === null || p.lp_change === undefined) lpHtml = `<br><span style="color: var(--color-subtexto); font-size: 0.8rem;">Calibrando PL...</span>`;
+                    else if (p.lp_change === 0) lpHtml = `<br><span style="color: var(--color-subtexto); font-weight: bold; font-size: 0.8rem;">0 LP</span>`;
+                    else {
                         const lpSign = p.lp_change > 0 ? '+' : '';
                         const lpClass = p.lp_change > 0 ? 'lp-gain' : 'lp-loss';
                         lpHtml = `<br><span class="${lpClass}">${lpSign}${p.lp_change} LP</span>`;
@@ -616,19 +644,35 @@ function mostrarScouter(j) {
                         <div class="m-trinket-box">${trinketUrl ? `<img src="${trinketUrl}">` : ''}</div>
                     </div>
                     <div class="m-teams">
-                        <div class="team-col">${team1}</div>
-                        <div class="team-col">${team2}</div>
+                        <div class="team-col">${team1Html}</div>
+                        <div class="team-col">${team2Html}</div>
                     </div>
                 `;
                 divPartidas.appendChild(card);
 
+                // Si es la última carta del paquete que trajimos, le metemos su banner de resumen
                 if (index === partidas.length - 1) {
                     insertarBannerDiario(divPartidas, fechaCorta, balanceDelDia);
                 }
             });
+
+            // Si trajimos 10, probablemente haya más, así que creamos el botón al final
+            if (partidas.length === 10) {
+                const btnCargar = document.createElement('button');
+                btnCargar.id = 'btn-cargar-mas';
+                btnCargar.className = 'btn-cargar-mas';
+                btnCargar.innerHTML = `⬇ Cargar Partidas Anteriores (${offset + 10} - ${offset + 20})`;
+                btnCargar.onclick = () => {
+                    scouterOffset += 10;
+                    cargarPartidasScouter(j, scouterOffset);
+                };
+                lista.appendChild(btnCargar);
+            }
         })
         .catch(err => {
-            lista.innerHTML = '<div style="color:#f25757; text-align:center; padding: 20px;">Error al cargar las partidas.</div>';
+            if (offset === 0) lista.innerHTML = '<div style="color:#f25757; text-align:center; padding: 20px;">Error al cargar las partidas.</div>';
+            const btn = document.getElementById('btn-cargar-mas');
+            if (btn) btn.textContent = "Error de red. Reintentar.";
         });
 }
 

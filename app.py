@@ -306,13 +306,14 @@ def add_jugador():
         log_error(f"Error agregando jugador: {e}")
         return jsonify({"error": "La cuenta ya existe o hubo un error en la base de datos."}), 500
 
-@app.route('/api/scouter/<puuid>/<modo>')
-def get_scouter(puuid, modo):
+# NUEVO: Le agregamos el <start_idx> para poder pedir de a 10 partidas
+@app.route('/api/scouter/<puuid>/<modo>', defaults={'start_idx': 0})
+@app.route('/api/scouter/<puuid>/<modo>/<int:start_idx>')
+def get_scouter(puuid, modo, start_idx):
     partidas = []
-    maestrias = [] # NUEVA LISTA PARA CAMPEONES
+    maestrias = [] 
     arg_tz = pytz.timezone('America/Argentina/Buenos_Aires')
     
-    # 1. BUSCAMOS LAS MAESTRÍAS (Top 3)
     try:
         res_mast = requests.get(f"https://la2.api.riotgames.com/lol/champion-mastery/v4/champion-masteries/by-puuid/{puuid}", headers=headers)
         if res_mast.status_code == 200:
@@ -320,15 +321,12 @@ def get_scouter(puuid, modo):
     except Exception as e:
         log_error(f"Error cargando maestrias: {e}")
 
-    # 2. BUSCAMOS LAS PARTIDAS (Igual que antes)
-    # 2. BUSCAMOS LAS PARTIDAS
     try:
-        # Si es ARAM, pedimos las ID de la cola Normal (450) y la Kaos (1130)
-        # --- FIX SCOUTER ARAMS (2026 + KAOS) ---
         qids = [450, 1130] if modo == 'aram' else [QUEUES.get(modo, 420)]
         m_ids = []
         for qid in qids:
-            res_ids = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue={qid}&startTime=1767225600&start=0&count=10", headers=headers)
+            # ACÁ SE APLICA EL START_IDX
+            res_ids = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue={qid}&startTime=1767225600&start={start_idx}&count=10", headers=headers)
             if res_ids.status_code == 200:
                 m_ids.extend(res_ids.json())
 
@@ -344,16 +342,12 @@ def get_scouter(puuid, modo):
             me = next(p for p in info['participants'] if p['puuid'] == puuid)
             
             q_id = info.get('queueId', 0)
-            if q_id == 1130:
-                q_name = "ARAM Kaos"
-            elif q_id == 450:
-                q_name = "ARAM Normal"
-            elif modo == 'soloq':
-                q_name = "Solo / Dúo"
-            else:
-                q_name = "Flex"
+            if q_id == 1130: q_name = "ARAM Kaos"
+            elif q_id == 450: q_name = "ARAM Normal"
+            elif modo == 'soloq': q_name = "Solo / Dúo"
+            else: q_name = "Flex"
 
-            lp_real = None # <--- AHORA ES NONE EN VEZ DE 0
+            lp_real = None 
             lp_current = 0 
             if modo != 'aram' and supabase:
                 try:
@@ -371,7 +365,7 @@ def get_scouter(puuid, modo):
 
             p_res = {
                 "win": me['win'], 
-                "remake": info.get('gameDuration', 0) < 210, # <--- NUEVO: Si dura menos de 3.5 min, es Remake
+                "remake": info.get('gameDuration', 0) < 210, 
                 "champ": me['championName'], "lvl": me['champLevel'],
                 "k": me['kills'], "d": me['deaths'], "a": me['assists'],
                 "cs": me['totalMinionsKilled'] + me['neutralMinionsKilled'],
@@ -386,17 +380,15 @@ def get_scouter(puuid, modo):
                 "queue_name": q_name,
                 "team1": [{"name": p['riotIdGameName'], "champ": p['championName']} for p in info['participants'][:5]],
                 "team2": [{"name": p['riotIdGameName'], "champ": p['championName']} for p in info['participants'][5:]],
-                "timestamp_sort": info['gameEndTimestamp'] # Lo usamos para acomodar la lista cronológicamente
+                "timestamp_sort": info['gameEndTimestamp']
             }
             partidas_temp.append(p_res)
             
-        # Acomodamos todas juntas de la más nueva a la más vieja, y cortamos en 10
         partidas_temp.sort(key=lambda x: x["timestamp_sort"], reverse=True)
         partidas = partidas_temp[:10]
         
     except Exception as e: return jsonify({"error": str(e)}), 500
     
-    # NUEVO: DEVOLVEMOS UN DICCIONARIO CON AMBAS COSAS
     return jsonify({"partidas": partidas, "maestrias": maestrias})
 
 if __name__ == '__main__':
