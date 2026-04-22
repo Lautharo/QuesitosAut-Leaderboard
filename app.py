@@ -20,8 +20,6 @@ SUPABASE_KEY = os.environ.get("SUPABASE_KEY")
 
 headers = {"X-Riot-Token": API_KEY}
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
-session = requests.Session()          # <--- NUEVO
-session.headers.update(headers)
 
 QUEUES = {"soloq": 420, "flex": 440, "aram": 450}
 VALOR_TIER = {"CHALLENGER": 9000, "GRANDMASTER": 8000, "MASTER": 7000, "DIAMOND": 6000, "EMERALD": 5000, "PLATINUM": 4000, "GOLD": 3000, "SILVER": 2000, "BRONZE": 1000, "IRON": 0, "UNRANKED": -1000}
@@ -101,26 +99,30 @@ def procesar_jugador(jugador, arg_tz):
     db_id = jugador.get('id')
     name_db, tag_db = jugador['nombre'], jugador['tag']
     puuid = jugador.get('puuid')
-    profile_icon_id = jugador.get('profileIconId') # <-- Extraemos de la DB
+    profile_icon_id = jugador.get('profileIconId')
     
     # Si la cuenta es nueva y no tiene PUUID, lo buscamos rápido
     if not puuid:
-        res_acc = session.get(f"https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{name_db}/{tag_db}")
-        if res_acc.status_code != 200: return None
-        puuid = res_acc.json()['puuid']
-        if supabase and db_id:
-            supabase.table("jugadores").update({"puuid": puuid}).eq("id", db_id).execute()
+        res_acc = requests.get(f"https://americas.api.riotgames.com/riot/account/v1/accounts/by-riot-id/{name_db}/{tag_db}", headers=headers)
+        if res_acc.status_code == 200:
+            puuid = res_acc.json()['puuid']
+            if supabase and db_id:
+                supabase.table("jugadores").update({"puuid": puuid}).eq("id", db_id).execute()
+        else:
+            return None
 
-    # NUEVO: Si no tenemos la foto en la DB (o es la del casquito 29), la buscamos y la guardamos para siempre
+    # FIX ICONOS: Usamos requests directo porque session se bugea en paralelo
     if not profile_icon_id or profile_icon_id == 29:
-        res_summ = session.get(f"https://la2.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/{puuid}")
+        res_summ = requests.get(f"https://la2.api.riotgames.com/lol/summoner/v4/summoners/by-puuid/{puuid}", headers=headers)
         if res_summ.status_code == 200:
             profile_icon_id = res_summ.json().get('profileIconId', 29)
             if supabase and db_id:
                 try:
                     supabase.table("jugadores").update({"profileIconId": profile_icon_id}).eq("id", db_id).execute()
-                except: pass
+                except Exception as e:
+                    log_error(f"Error guardando foto DB para {name_db}: {e}")
         else:
+            log_error(f"Error pidiendo foto a Riot para {name_db}: {res_summ.status_code}")
             profile_icon_id = 29
             
     try:
