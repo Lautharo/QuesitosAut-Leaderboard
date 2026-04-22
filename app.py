@@ -41,11 +41,10 @@ def log_error(mensaje):
     """Fuerza a Render a mostrar el error en consola al instante"""
     print(f"[ERROR CRÍTICO] {mensaje}", file=sys.stderr, flush=True)
 
-def sync_lp_change(puuid, queue_type, current_lp, puntos_grafica, last_match_id):
+def sync_lp_change(puuid, queue_type, current_lp, puntos_grafica, last_match_id, end_ts):
     if not supabase: return 0
     try:
         with db_lock:
-            # Traemos los puntos totales y también el último match_id guardado
             res = supabase.table("match_history").select("puntos_grafica, match_id").eq("puuid", puuid).eq("queue_type", queue_type).order("created_at", desc=True).limit(1).execute()
             
             last_pts = res.data[0]['puntos_grafica'] if res.data else puntos_grafica
@@ -53,13 +52,25 @@ def sync_lp_change(puuid, queue_type, current_lp, puntos_grafica, last_match_id)
             
             diff = puntos_grafica - last_pts 
 
-            # FIX: Guardamos la partida SIEMPRE que el match_id sea nuevo, aunque la diferencia sea 0
-            if not res.data or last_match_id != last_saved_match:
+            # 1. Si hay diferencia real de puntos, guardamos siempre
+            if diff != 0 or not res.data:
+                m_id = last_match_id if last_match_id else f"manual_{int(time.time())}"
                 supabase.table("match_history").upsert({
                     "puuid": puuid, "queue_type": queue_type,
                     "league_points": current_lp, "puntos_grafica": puntos_grafica, "change_lp": diff,
-                    "match_id": last_match_id
+                    "match_id": m_id
                 }, on_conflict="puuid,queue_type,match_id").execute()
+            
+            # 2. Si los puntos NO cambiaron (0 LP), solo guardamos si confirmamos que es una ID nueva de esta cola específica
+            elif last_match_id and last_match_id != last_saved_match:
+                # Escudo anti-lag: Esperar 10 mins (600 segundos) para asegurarnos que Riot ya actualizó
+                if time.time() - end_ts > 600:
+                    supabase.table("match_history").upsert({
+                        "puuid": puuid, "queue_type": queue_type,
+                        "league_points": current_lp, "puntos_grafica": puntos_grafica, "change_lp": 0,
+                        "match_id": last_match_id
+                    }, on_conflict="puuid,queue_type,match_id").execute()
+            
             return diff
     except Exception as e:
         log_error(f"Supabase falló al sincronizar PL de {puuid}: {e}")
@@ -135,24 +146,37 @@ def procesar_jugador(jugador, arg_tz):
             profile_icon_id = res_summoner.json().get('profileIconId', 29)
         # ------------------------------------------------------------------
 
-        # NUEVO FIX: Pedimos 3 por si hay alguna bugeada/en curso
-        res_m = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count=3", headers=headers)
+        # NUEVO FIX: Buscamos hasta 5 partidas para separar cuál fue la última de SoloQ y cuál de Flex
+        res_m = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?start=0&count=5", headers=headers)
         if res_m.status_code != 200: return None 
         m_ids = res_m.json()
         
-        last_match_id = ""
+        latest_matches = {"soloq": ("", 0), "flex": ("", 0)}
         last_date = "---"
+        first_date_set = False
         
         for mid in m_ids:
             res_info = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/{mid}", headers=headers)
             if res_info.status_code == 200:
                 m_info = res_info.json()
-                # Si tiene gameEndTimestamp, la partida ya terminó.
                 if 'gameEndTimestamp' in m_info['info']:
-                    last_match_id = mid
-                    dt_utc = datetime.fromtimestamp(m_info['info']['gameEndTimestamp']/1000, tz=pytz.utc)
-                    last_date = dt_utc.astimezone(arg_tz).strftime('%d/%m %H:%M')
-                    break # Encontramos la última terminada, salimos del loop
+                    end_ts = m_info['info']['gameEndTimestamp'] / 1000
+                    
+                    if not first_date_set:
+                        dt_utc = datetime.fromtimestamp(end_ts, tz=pytz.utc)
+                        last_date = dt_utc.astimezone(arg_tz).strftime('%d/%m %H:%M')
+                        first_date_set = True
+
+                    # Separamos los IDs según la cola (420 es SoloQ, 440 es Flex)
+                    qid = m_info['info'].get('queueId')
+                    if qid == 420 and not latest_matches["soloq"][0]:
+                        latest_matches["soloq"] = (mid, end_ts)
+                    elif qid == 440 and not latest_matches["flex"][0]:
+                        latest_matches["flex"] = (mid, end_ts)
+                    
+                    # Si ya encontramos la última de ambas colas, cortamos el loop
+                    if latest_matches["soloq"][0] and latest_matches["flex"][0]:
+                        break
 
         res_league = requests.get(f"https://la2.api.riotgames.com/lol/league/v4/entries/by-puuid/{puuid}", headers=headers)
         if res_league.status_code != 200: return None
@@ -178,11 +202,11 @@ def procesar_jugador(jugador, arg_tz):
         if sq:
             pts_sq = VALOR_TIER.get(sq['tier'], 0) + VALOR_RANK.get(sq['rank'], 0) + sq['leaguePoints']
             d["soloq"].update({"tier": sq['tier'], "rank": sq['rank'], "lp": sq['leaguePoints'], "wins": sq['wins'], "losses": sq['losses'], "wr": round((sq['wins']/(sq['wins']+sq['losses']))*100,1), "puntos_grafica": pts_sq})
-            sync_lp_change(puuid, "soloq", sq['leaguePoints'], pts_sq, last_match_id)
+            sync_lp_change(puuid, "soloq", sq['leaguePoints'], pts_sq, latest_matches["soloq"][0], latest_matches["soloq"][1])
         if fl:
             pts_fl = VALOR_TIER.get(fl['tier'], 0) + VALOR_RANK.get(fl['rank'], 0) + fl['leaguePoints']
             d["flex"].update({"tier": fl['tier'], "rank": fl['rank'], "lp": fl['leaguePoints'], "wins": fl['wins'], "losses": fl['losses'], "wr": round((fl['wins']/(fl['wins']+fl['losses']))*100,1), "puntos_grafica": pts_fl})
-            sync_lp_change(puuid, "flex", fl['leaguePoints'], pts_fl, last_match_id)
+            sync_lp_change(puuid, "flex", fl['leaguePoints'], pts_fl, latest_matches["flex"][0], latest_matches["flex"][1])
         
         # Validación extra en ARAM
         # --- FIX TOTAL ARAMS (2026 + KAOS) ---
