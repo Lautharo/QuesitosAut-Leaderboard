@@ -126,14 +126,34 @@ def procesar_jugador(jugador, arg_tz):
         res_fl = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/by-puuid/{puuid}/ids?queue=440&start=0&count=1", headers=headers)
         fl_id = res_fl.json()[0] if res_fl.status_code == 200 and res_fl.json() else ""
 
+        # --- FIX 1: OBTENER LA FECHA EXACTA DE LA ÚLTIMA PARTIDA ---
+        sq_date = "---"
+        fl_date = "---"
+        
+        if sq_id:
+            res_info = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/{sq_id}", headers=headers)
+            if res_info.status_code == 200:
+                end_ts = res_info.json()['info'].get('gameEndTimestamp', 0) / 1000
+                if end_ts > 0:
+                    dt_utc = datetime.fromtimestamp(end_ts, tz=pytz.utc)
+                    sq_date = dt_utc.astimezone(arg_tz).strftime('%d/%m %H:%M')
+
+        if fl_id:
+            res_info = requests.get(f"https://americas.api.riotgames.com/lol/match/v5/matches/{fl_id}", headers=headers)
+            if res_info.status_code == 200:
+                end_ts = res_info.json()['info'].get('gameEndTimestamp', 0) / 1000
+                if end_ts > 0:
+                    dt_utc = datetime.fromtimestamp(end_ts, tz=pytz.utc)
+                    fl_date = dt_utc.astimezone(arg_tz).strftime('%d/%m %H:%M')
+
         d = {
-            "nombre": name_db, "tag": tag_db, "puuid": puuid, "last_game": "Reciente",
+            "nombre": name_db, "tag": tag_db, "puuid": puuid,
             "profileIconId": profile_icon_id,
             "is_main": jugador.get('is_main', True),
             "propietario": jugador.get('propietario'),
-            "soloq": {"tier": "UNRANKED", "rank": "", "lp": 0, "wins": 0, "losses": 0, "wr": 0, "puntos_grafica": 0},
-            "flex": {"tier": "UNRANKED", "rank": "", "lp": 0, "wins": 0, "losses": 0, "wr": 0, "puntos_grafica": 0},
-            "aram": {"tier": "UNRANKED", "wins": 0, "losses": 0, "wr": 0, "total_partidas": 0, "puntos_grafica": 0},
+            "soloq": {"tier": "UNRANKED", "rank": "", "lp": 0, "wins": 0, "losses": 0, "wr": 0, "puntos_grafica": 0, "last_game": sq_date},
+            "flex": {"tier": "UNRANKED", "rank": "", "lp": 0, "wins": 0, "losses": 0, "wr": 0, "puntos_grafica": 0, "last_game": fl_date},
+            "aram": {"tier": "UNRANKED", "wins": 0, "losses": 0, "wr": 0, "total_partidas": 0, "puntos_grafica": 0, "last_game": "---"},
             "historiales": { 
                 "soloq": get_historial_db(puuid, "soloq"),
                 "flex": get_historial_db(puuid, "flex")

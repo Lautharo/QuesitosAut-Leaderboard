@@ -177,7 +177,7 @@ function renderizarTabla() {
                             <span style="color:gray; font-weight:normal; font-size:0.9rem;">#${j.tag}</span>
                         </div>
                         ${!j.is_main ? `<small style="color: var(--color-gold); font-size: 0.75rem; font-weight: bold; background: rgba(212, 181, 92, 0.1); padding: 2px 6px; border-radius: 4px; display: inline-block; margin: 2px 0; width: fit-content;">Smurf de ${j.propietario}</small>` : ''}
-                        <small style="color:gray; font-size:0.7rem; text-transform:uppercase;">ÚLTIMA: ${j.last_game || '---'}</small>
+                        <small style="color:gray; font-size:0.7rem; text-transform:uppercase;">ÚLTIMA: ${stats.last_game || '---'}</small>
                     </div>
                 </div>
             </td>
