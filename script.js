@@ -412,20 +412,29 @@ function cargarPartidasScouter(j, offset) {
                 let tk = 0, td = 0, ta = 0, twins = 0;
                 let rolesCount = {};
                 let compañeros = {}; 
+                let totalCS = 0;
+                let totalSegundos = 0;
                 const champFix = (cName) => cName === 'FiddleSticks' ? 'Fiddlesticks' : cName;
 
-                // CAMBIO 1: Achicamos a 25px y evitamos el salto de línea para que entren los 10 juntitos
+                // LOS CAMPEONES CHIQUITOS QUE VUELVEN
                 const ultimosChampsHtml = partidas.map(p => {
                     const borderColor = p.remake ? '#9ca3af' : (p.win ? '#2add9c' : '#f25757');
                     return `<img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${champFix(p.champ)}.png" 
                             style="width:25px; height:25px; border-radius:50%; border: 2px solid ${borderColor}; box-shadow: 0 0 5px ${borderColor}80;" 
                             title="${p.champ} (${p.remake ? 'Remake' : (p.win ? 'Victoria' : 'Derrota')})">`;
                 }).join('');
-                
+
+                const nombresAmigos = datosGlobales.map(x => x.nombre.toLowerCase());
+                const esAmigo = (nombre) => nombresAmigos.includes(nombre.toLowerCase()) && nombre.toLowerCase() !== j.nombre.toLowerCase();
+
                 partidas.forEach(p => {
                     tk += p.k; td += p.d; ta += p.a;
                     if (p.win) twins++;
+                    totalCS += p.cs;
                     
+                    let parts = p.duracion.split(':');
+                    totalSegundos += (parseInt(parts[0]) * 60) + parseInt(parts[1]);
+
                     let r = p.role || 'none';
                     if (r !== 'none' && r !== 'ARAM' && !isAram) rolesCount[r] = (rolesCount[r] || 0) + 1;
 
@@ -435,6 +444,12 @@ function cargarPartidasScouter(j, offset) {
                     });
                 });
 
+                // Cálculos de Farmeo y KDA
+                const csMin = totalSegundos > 0 ? (totalCS / (totalSegundos / 60)).toFixed(1) : 0;
+                const avgSegundos = totalSegundos / (partidas.length || 1);
+                const avgMin = Math.floor(avgSegundos / 60);
+                const avgSec = Math.floor(avgSegundos % 60).toString().padStart(2, '0');
+
                 const kdaNum = td === 0 ? "Perfecto" : ((tk + ta) / td).toFixed(2);
                 const wrNum = Math.round((twins / partidas.length) * 100);
                 
@@ -443,10 +458,10 @@ function cargarPartidasScouter(j, offset) {
                 
                 const favRoleKey = Object.keys(rolesCount).length > 0 ? Object.keys(rolesCount).reduce((a, b) => rolesCount[a] > rolesCount[b] ? a : b) : null;
                 const favRole = favRoleKey ? roleMappingText[favRoleKey.toLowerCase()] : (isAram ? 'ARAM' : 'Polivalente');
-
                 const opggRoleKey = favRoleKey ? opggRoles[favRoleKey.toLowerCase()] : null;
                 const roleIconSvg = opggRoleKey && !isAram ? `<img src="https://s-lol-web.op.gg/images/icon/icon-position-${opggRoleKey}.svg" style="width:16px; vertical-align: middle; margin-left: 6px; filter: drop-shadow(0 0 2px rgba(0,0,0,0.8));">` : '';
 
+                // Lógica del Mejor Dúo (con contador y color de amigo)
                 let mejorDuo = "Lobo Solitario";
                 let maxPartidasDuo = 0;
                 for (const [nom, cant] of Object.entries(compañeros)) {
@@ -455,8 +470,10 @@ function cargarPartidasScouter(j, offset) {
                         maxPartidasDuo = cant;
                     }
                 }
-
-                const rachaHtml = partidas.map(p => p.win ? `<span style="color:#2add9c; font-size:1rem; margin:0 1px;">●</span>` : `<span style="color:#f25757; font-size:1rem; margin:0 1px;">●</span>`).join('');
+                const colorDuo = esAmigo(mejorDuo) ? '#4bcaeb' : 'var(--color-gold)';
+                const duoTextHtml = maxPartidasDuo >= 2 
+                    ? `<span style="color:${colorDuo}; font-weight:bold;">${mejorDuo} <span style="color:gray; font-size:0.75rem;">(${maxPartidasDuo} PJs)</span></span>` 
+                    : `<span style="color:var(--color-subtexto); font-weight:bold;">🐺 Lobo Solitario</span>`;
 
                 // --- HUMOR NEGRO ---
                 let tagVibe = "";
@@ -495,20 +512,19 @@ function cargarPartidasScouter(j, offset) {
                     maestriasHtml = `<div style="display:flex; justify-content:center; align-items:flex-end; width:100%; padding: 10px 0;">${podioHtml}</div>`;
                 }
 
-                // CAMBIO 2: HEADER CON FOTO, NOMBRE, TAG Y RANGO (AHORA CON ESCUDO)
+                // HEADER CON ICONO DE RANGO GIGANTE
                 const iconId = j.profileIconId || 29;
                 const profileIconUrl = `https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/profileicon/${iconId}.png`;
                 const tierActual = j[modoActual].tier;
-                const infoExtra = !isAram && tierActual !== "UNRANKED" ? `<span class="rank-${tierActual}" style="font-weight: 800;">${tierActual} ${j[modoActual].rank}</span> - ${j[modoActual].lp} LP` : (isAram ? 'Estadísticas Generales' : 'Unranked');
+                const infoExtra = !isAram && tierActual !== "UNRANKED" ? `<span class="rank-${tierActual}" style="font-weight: 800;">${tierActual} ${j[modoActual].rank}</span> - <span style="color:white">${j[modoActual].lp} LP</span>` : (isAram ? 'Estadísticas Generales' : 'Unranked');
                 
-                // Obtenemos la imagen del escudo de Riot
                 const rankIconUrl = !isAram && tierActual !== "UNRANKED" ? `https://raw.communitydragon.org/latest/plugins/rcp-fe-lol-static-assets/global/default/images/ranked-emblem/emblem-${tierActual.toLowerCase()}.png` : '';
-                const rankIconHtml = rankIconUrl ? `<img src="${rankIconUrl}" style="width: 55px; height: 55px; object-fit: contain; filter: drop-shadow(0 0 8px rgba(0,0,0,0.4)); margin-left: auto;">` : '';
+                const rankIconHtml = rankIconUrl ? `<img src="${rankIconUrl}" style="width: 85px; height: 85px; object-fit: contain; filter: drop-shadow(0 0 12px rgba(0,0,0,0.4)); margin-left: auto; margin-right: -5px; transform: scale(1.15);">` : '';
 
                 const headerHtml = `
-                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 5px; background: #1c1f26; padding: 15px; border-radius: 10px; border: 1px solid #2d3748;">
+                    <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 5px; background: #1c1f26; padding: 15px; border-radius: 10px; border: 1px solid #2d3748; overflow: hidden;">
                         <img src="${profileIconUrl}" style="width: 55px; height: 55px; border-radius: 50%; border: 2px solid var(--amarillo-pro); box-shadow: 0 0 10px rgba(212, 181, 92, 0.2);">
-                        <div>
+                        <div style="z-index: 2;">
                             <div style="font-size: 1.25rem; font-weight: 900; color: white;">${j.nombre} <span style="color: gray; font-size: 0.9rem; font-weight: 500;">#${j.tag}</span></div>
                             <div style="font-size: 0.85rem; color: var(--color-subtexto); margin-top: 3px;">
                                 ${!j.is_main ? `<span style="color: var(--color-gold); font-weight: bold;">Smurf de ${j.propietario}</span> • ` : ''}
@@ -519,7 +535,7 @@ function cargarPartidasScouter(j, offset) {
                     </div>
                 `;
 
-                // CAMBIO 3: ORDEN Y SEPARADORES SOLICITADOS
+                // CONSTRUCCIÓN DEL PANEL
                 panelStats.innerHTML = `
                     <div class="scouter-stats-container">
                         
@@ -531,7 +547,7 @@ function cargarPartidasScouter(j, offset) {
                         </div>
                         
                         <div style="text-align: center; margin: 15px 0 5px 0; border-bottom: 1px solid #2d3748; line-height: 0.1em;">
-                            <span style="background: var(--bg-tarjeta); padding: 0 15px; color: var(--color-subtexto); font-size: 0.75rem; font-weight: bold; text-transform: uppercase;">Estadísticas de las últimas ${partidas.length} partidas</span>
+                            <span style="background: var(--bg-tarjeta); padding: 0 15px; color: var(--color-subtexto); font-size: 0.75rem; font-weight: bold; text-transform: uppercase;">Análisis de las últimas ${partidas.length} partidas</span>
                         </div>
 
                         <div class="stat-box" style="border-left-color: ${kdaNum >= 3 ? 'var(--color-emerald)' : '#f25757'}">
@@ -543,7 +559,7 @@ function cargarPartidasScouter(j, offset) {
                                 </div>
                                 <div style="text-align: right;">
                                     <div class="role-badge" style="background: ${wrNum >= 50 ? 'rgba(42, 221, 156, 0.2)' : 'rgba(242, 87, 87, 0.2)'}; color: ${wrNum >= 50 ? 'var(--color-emerald)' : '#f25757'}; margin-bottom: 5px;">WR: ${wrNum}%</div><br>
-                                    <div class="role-badge" style="margin: 0; display: inline-flex; align-items: center;">Fav: ${favRole} ${roleIconSvg}</div>
+                                    <div class="role-badge" style="margin: 0; display: inline-flex; align-items: center;">Rol (Últ. ${partidas.length}): ${favRole} ${roleIconSvg}</div>
                                 </div>
                             </div>
                         </div>
@@ -552,12 +568,16 @@ function cargarPartidasScouter(j, offset) {
                             <span style="color:var(--color-subtexto); font-size:0.75rem; font-weight:bold; text-transform:uppercase; display:block; margin-bottom: 8px;">📊 Radar de Quesito</span>
                             <div style="display: flex; flex-direction: column; gap: 8px;">
                                 <div style="display:flex; justify-content: space-between; align-items:center;">
-                                    <span style="color:white; font-size:0.85rem;">Forma Reciente:</span>
-                                    <div>${rachaHtml}</div>
+                                    <span style="color:white; font-size:0.85rem;">Farmeo Promedio:</span>
+                                    <b style="color:white; font-size:0.85rem;">${csMin} <span style="color:gray; font-size:0.7rem;">CS/M</span></b>
+                                </div>
+                                <div style="display:flex; justify-content: space-between; align-items:center;">
+                                    <span style="color:white; font-size:0.85rem;">Duración Promedio:</span>
+                                    <b style="color:white; font-size:0.85rem;">${avgMin}:${avgSec} <span style="color:gray; font-size:0.7rem;">MIN</span></b>
                                 </div>
                                 <div style="display:flex; justify-content: space-between; align-items:center;">
                                     <span style="color:white; font-size:0.85rem;">Mejor Dúo:</span>
-                                    <b style="color:var(--color-gold); font-size:0.85rem;">${mejorDuo}</b>
+                                    ${duoTextHtml}
                                 </div>
                                 <div style="display:flex; justify-content: space-between; align-items:center; margin-top: 2px;">
                                     <span style="color:white; font-size:0.85rem;">Estado:</span>
