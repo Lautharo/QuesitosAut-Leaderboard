@@ -870,6 +870,29 @@ function cerrarModal() {
     document.getElementById('nuevo-ismain').checked = true;
 }
 
+// --- OBTENER VERSIÓN AUTOMÁTICA DE GITHUB ---
+function obtenerVersionGithub() {
+    // Le preguntamos a la API de GitHub por el último cambio en tu repositorio
+    fetch("https://api.github.com/repos/lautharo/QuesitosAut-Leaderboard/commits/main")
+        .then(res => res.json())
+        .then(data => {
+            if (data && data.sha) {
+                // Sacamos los primeros 7 caracteres del código de subida (Commit Hash)
+                const commitCorto = data.sha.substring(0, 7);
+                
+                // Buscamos el texto base que pusiste en el HTML
+                const versionBase = document.getElementById('version-github').textContent;
+                
+                // Lo actualizamos sumándole el código automático de GitHub
+                document.getElementById('version-github').textContent = `${versionBase} (Build ${commitCorto})`;
+            }
+        })
+        .catch(err => console.log("No se pudo cargar el build de GitHub"));
+}
+
+// Ejecutamos la función apenas cargue el código
+obtenerVersionGithub();
+
 function guardarNuevaCuenta() {
     const nombre = document.getElementById('nuevo-nombre').value.trim();
     const tag = document.getElementById('nuevo-tag').value.trim();
