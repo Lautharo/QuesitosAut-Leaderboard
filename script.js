@@ -543,8 +543,13 @@ function mostrarScouter(j) {
                 ultimaFechaVista = fechaCorta;
                 balanceDelDia += p.lp_change;
 
+                // --- LÓGICA DE REMAKE ---
+                const isRemake = p.remake;
+                const textoResultado = isRemake ? 'Remake' : (p.win ? 'Victoria' : 'Derrota');
+                const colorResultado = isRemake ? '#9ca3af' : (p.win ? '#2add9c' : '#f25757');
+
                 const card = document.createElement('div');
-                card.className = `match-card ${p.win ? 'win' : 'loss'}`;
+                card.className = `match-card ${isRemake ? 'remake' : (p.win ? 'win' : 'loss')}`;
                 
                 const team1 = p.team1.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${champFix(pl.champ)}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'"><b>${pl.name}</b></div>`).join('');
                 const team2 = p.team2.map(pl => `<div class="player-row ${pl.name === j.nombre ? 'me' : ''}"><img src="https://ddragon.leagueoflegends.com/cdn/${LOL_VER}/img/champion/${champFix(pl.champ)}.png" onerror="this.src='https://raw.communitydragon.org/latest/plugins/rcp-be-lol-game-data/global/default/v1/champion-icons/-1.png'"><b>${pl.name}</b></div>`).join('');
@@ -568,16 +573,13 @@ function mostrarScouter(j) {
 
                 let lpHtml = '';
                 if (!isAram) {
-                    // Si es None (null), significa que es una partida vieja que no está en la base
-                    if (p.lp_change === null || p.lp_change === undefined) {
+                    if (isRemake) {
+                        lpHtml = `<br><span style="color: var(--color-subtexto); font-weight: bold; font-size: 0.8rem;">- LP</span>`;
+                    } else if (p.lp_change === null || p.lp_change === undefined) {
                         lpHtml = `<br><span style="color: var(--color-subtexto); font-size: 0.8rem;">Calibrando PL...</span>`;
-                    } 
-                    // Si es exactamente 0, significa que jugaste, está en la base, pero un AFK o algo te dio 0 puntos
-                    else if (p.lp_change === 0) {
+                    } else if (p.lp_change === 0) {
                         lpHtml = `<br><span style="color: var(--color-subtexto); font-weight: bold; font-size: 0.8rem;">0 LP</span>`;
-                    } 
-                    // Si ganaste o perdiste puntos normales
-                    else {
+                    } else {
                         const lpSign = p.lp_change > 0 ? '+' : '';
                         const lpClass = p.lp_change > 0 ? 'lp-gain' : 'lp-loss';
                         lpHtml = `<br><span class="${lpClass}">${lpSign}${p.lp_change} LP</span>`;
@@ -586,7 +588,7 @@ function mostrarScouter(j) {
 
                 card.innerHTML = `
                     <div class="m-info">
-                        <b style="color:${p.win ? '#2add9c' : '#f25757'}">${p.win ? 'Victoria' : 'Derrota'}</b>
+                        <b style="color:${colorResultado}">${textoResultado}</b>
                         <span style="color: var(--amarillo-pro); font-weight: bold; font-size: 0.75rem;">${p.queue_name}</span><br>
                         ${p.fecha} • ${p.duracion}
                         ${lpHtml}

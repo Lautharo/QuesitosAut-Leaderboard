@@ -299,6 +299,12 @@ h1 {
 		background: rgba(242, 87, 87, 0.05);
 	}
 
+	/* --- NUEVO: Estilo para Remake --- */
+	.match-card.remake {
+		border-left-color: #9ca3af;
+		background: rgba(156, 163, 175, 0.05);
+	}
+
 .m-info {
 	font-size: 0.8rem;
 	color: var(--color-subtexto);

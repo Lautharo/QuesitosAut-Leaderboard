@@ -45,13 +45,16 @@ def sync_lp_change(puuid, queue_type, current_lp, puntos_grafica, last_match_id)
     if not supabase: return 0
     try:
         with db_lock:
-            # Ahora traemos los puntos totales, no solo los PL de 0 a 100
-            res = supabase.table("match_history").select("puntos_grafica").eq("puuid", puuid).eq("queue_type", queue_type).order("created_at", desc=True).limit(1).execute()
-            last_pts = res.data[0]['puntos_grafica'] if res.data else puntos_grafica
+            # Traemos los puntos totales y también el último match_id guardado
+            res = supabase.table("match_history").select("puntos_grafica, match_id").eq("puuid", puuid).eq("queue_type", queue_type).order("created_at", desc=True).limit(1).execute()
             
-            diff = puntos_grafica - last_pts # Ej: 2218 (Plata III 18) - 2197 (Plata IV 97) = 21
+            last_pts = res.data[0]['puntos_grafica'] if res.data else puntos_grafica
+            last_saved_match = res.data[0]['match_id'] if res.data else None
+            
+            diff = puntos_grafica - last_pts 
 
-            if diff != 0 or not res.data:
+            # FIX: Guardamos la partida SIEMPRE que el match_id sea nuevo, aunque la diferencia sea 0
+            if not res.data or last_match_id != last_saved_match:
                 supabase.table("match_history").upsert({
                     "puuid": puuid, "queue_type": queue_type,
                     "league_points": current_lp, "puntos_grafica": puntos_grafica, "change_lp": diff,
@@ -367,7 +370,9 @@ def get_scouter(puuid, modo):
             except Exception: primary_rune, secondary_tree = 0, 0
 
             p_res = {
-                "win": me['win'], "champ": me['championName'], "lvl": me['champLevel'],
+                "win": me['win'], 
+                "remake": info.get('gameDuration', 0) < 210, # <--- NUEVO: Si dura menos de 3.5 min, es Remake
+                "champ": me['championName'], "lvl": me['champLevel'],
                 "k": me['kills'], "d": me['deaths'], "a": me['assists'],
                 "cs": me['totalMinionsKilled'] + me['neutralMinionsKilled'],
                 "items": [me.get(f'item{i}', 0) for i in range(7)],
