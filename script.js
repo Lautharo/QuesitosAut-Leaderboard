@@ -369,7 +369,7 @@ function mostrarScouter(j) {
     scouterSection.style.display = 'block';
     scouterSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
     
-    document.getElementById('scouter-nombre').textContent = `SCOUTER: ${j.nombre} (Buscando...)`;
+    document.getElementById('scouter-nombre').innerHTML = `🔎 HISTORIAL DE AUTISMO <span class="highlight">// ${j.nombre}</span> <span style="font-size: 0.8rem; color: gray; margin-left: 10px;">(Cargando...)</span>`;
     lista.innerHTML = '<div style="color:var(--amarillo-pro); text-align:center; padding: 20px;">Analizando historial en tiempo real...</div>';
     panelStats.innerHTML = '<div style="color:var(--amarillo-pro); text-align:center; width: 100%;">Cargando datos del jugador...</div>'; 
 
@@ -394,7 +394,7 @@ function cargarPartidasScouter(j, offset) {
             const maestrias = data.maestrias || [];
 
             if (offset === 0) {
-                document.getElementById('scouter-nombre').textContent = `SCOUTER: ${j.nombre}`;
+                document.getElementById('scouter-nombre').innerHTML = `🔎 HISTORIAL DE AUTISMO <span class="highlight">// ${j.nombre}</span>`;
                 lista.innerHTML = ''; 
                 if (partidas.length === 0) {
                     lista.innerHTML = '<div style="color:gray; text-align:center; padding:20px;">No se encontraron partidas.</div>';
