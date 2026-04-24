@@ -22,8 +22,8 @@ headers = {"X-Riot-Token": API_KEY}
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY) if SUPABASE_URL and SUPABASE_KEY else None
 
 QUEUES = {"soloq": 420, "flex": 440, "aram": 450}
-VALOR_TIER = {"CHALLENGER": 9000, "GRANDMASTER": 8000, "MASTER": 7000, "DIAMOND": 6000, "EMERALD": 5000, "PLATINUM": 4000, "GOLD": 3000, "SILVER": 2000, "BRONZE": 1000, "IRON": 0, "UNRANKED": -1000}
-VALOR_RANK = {"I": 400, "II": 300, "III": 200, "IV": 100, "": 0}
+VALOR_TIER = {"CHALLENGER": 2500, "GRANDMASTER": 2500, "MASTER": 2500, "DIAMOND": 2400, "EMERALD": 2000, "PLATINUM": 1600, "GOLD": 1200, "SILVER": 800, "BRONZE": 400, "IRON": 0, "UNRANKED": -400}
+VALOR_RANK = {"I": 300, "II": 200, "III": 100, "IV": 0, "": 0}
 
 SUMMONERS = {
     4: "SummonerFlash", 14: "SummonerDot", 11: "SummonerSmite", 

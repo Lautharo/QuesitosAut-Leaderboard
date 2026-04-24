@@ -37,16 +37,35 @@ function obtenerColor(nombre) {
 }
 
 // --- TRADUCTOR DE PUNTOS A RANGO PARA EL TOOLTIP ---
+// --- TRADUCTOR DE PUNTOS A RANGO PARA EL TOOLTIP ---
 function decodificarPuntos(puntos) {
     if (puntos < 0) return "UNRANKED";
-    
+
+    if (puntos >= 2800) {
+        let lp = puntos - 2800;
+        return `MASTER+ - ${lp} LP`; 
+    }
+
     const tiers = [
-        { val: 9000, name: "CHALLENGER" }, { val: 8000, name: "GRANDMASTER" },
-        { val: 7000, name: "MASTER" }, { val: 6000, name: "DIAMOND" },
-        { val: 5000, name: "EMERALD" }, { val: 4000, name: "PLATINUM" },
-        { val: 3000, name: "GOLD" }, { val: 2000, name: "SILVER" },
-        { val: 1000, name: "BRONZE" }, { val: 0, name: "IRON" }
+        { val: 2400, name: "DIAMOND" }, { val: 2000, name: "EMERALD" },
+        { val: 1600, name: "PLATINUM" }, { val: 1200, name: "GOLD" },
+        { val: 800, name: "SILVER" }, { val: 400, name: "BRONZE" },
+        { val: 0, name: "IRON" }
     ];
+    
+    let t = tiers.find(t => puntos >= t.val) || tiers[6];
+    let resto = puntos - t.val;
+    
+    const ranks = [
+        { val: 300, name: "I" }, { val: 200, name: "II" },
+        { val: 100, name: "III" }, { val: 0, name: "IV" }
+    ];
+    
+    let r = ranks.find(r => resto >= r.val) || {val: 0, name: "IV"};
+    let lp = resto - r.val;
+    
+    return `${t.name} ${r.name} - ${lp} LP`;
+}
     
     // Encontramos el tier base
     let t = tiers.find(t => puntos >= t.val) || tiers[9];
@@ -204,15 +223,13 @@ const fondoLigasPlugin = {
         const { ctx, chartArea: { top, bottom, left, right }, scales: { y } } = chart;
         
         const ligas = [
-            { nombre: "C", min: 9000, color: "rgba(255, 215, 0, 0.05)" },
-            { nombre: "GM", min: 8000, color: "rgba(255, 0, 0, 0.05)" },
-            { nombre: "M", min: 7000, color: "rgba(128, 0, 128, 0.05)" },
-            { nombre: "D", min: 6000, color: "rgba(87, 101, 242, 0.05)" },
-            { nombre: "E", min: 5000, color: "rgba(42, 221, 156, 0.05)" },
-            { nombre: "P", min: 4000, color: "rgba(75, 202, 235, 0.05)" },
-            { nombre: "G", min: 3000, color: "rgba(242, 175, 66, 0.05)" },
-            { nombre: "S", min: 2000, color: "rgba(160, 160, 160, 0.05)" },
-            { nombre: "B", min: 1000, color: "rgba(205, 127, 50, 0.05)" },
+            { nombre: "M+", min: 2800, color: "rgba(255, 215, 0, 0.05)" },
+            { nombre: "D", min: 2400, color: "rgba(87, 101, 242, 0.05)" },
+            { nombre: "E", min: 2000, color: "rgba(42, 221, 156, 0.05)" },
+            { nombre: "P", min: 1600, color: "rgba(75, 202, 235, 0.05)" },
+            { nombre: "G", min: 1200, color: "rgba(242, 175, 66, 0.05)" },
+            { nombre: "S", min: 800, color: "rgba(160, 160, 160, 0.05)" },
+            { nombre: "B", min: 400, color: "rgba(205, 127, 50, 0.05)" },
             { nombre: "I", min: 0, color: "rgba(81, 72, 60, 0.05)" }
         ];
 
@@ -312,11 +329,12 @@ function actualizarGrafica() {
             interaction: { mode: 'nearest', intersect: false },
             scales: {
                 y: {
-                    suggestedMin: 1000, 
-                    suggestedMax: 6000,
+                    suggestedMin: 0,      // <--- Cambiar a 0
+                    suggestedMax: 3000,   // <--- Cambiar a 3000
                     grid: { color: 'rgba(255, 255, 255, 0.05)' },
                     ticks: { display: false }
                 },
+                
                 x: {
                     type: 'linear',
                     min: 0,
