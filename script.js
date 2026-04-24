@@ -37,7 +37,6 @@ function obtenerColor(nombre) {
 }
 
 // --- TRADUCTOR DE PUNTOS A RANGO PARA EL TOOLTIP ---
-// --- TRADUCTOR DE PUNTOS A RANGO PARA EL TOOLTIP ---
 function decodificarPuntos(puntos) {
     if (puntos < 0) return "UNRANKED";
 
@@ -66,28 +65,6 @@ function decodificarPuntos(puntos) {
     
     return `${t.name} ${r.name} - ${lp} LP`;
 }
-    
-    // Encontramos el tier base
-    let t = tiers.find(t => puntos >= t.val) || tiers[9];
-    let resto = puntos - t.val;
-    
-    // Master, Grandmaster y Challenger no tienen divisiones
-    if (t.val >= 7000) {
-        return `${t.name} - ${resto} LP`;
-    }
-    
-    const ranks = [
-        { val: 400, name: "I" }, { val: 300, name: "II" },
-        { val: 200, name: "III" }, { val: 100, name: "IV" }
-    ];
-    
-    // Encontramos la división
-    let r = ranks.find(r => resto >= r.val) || {val: 0, name: "IV"};
-    let lp = resto - r.val;
-    
-    return `${t.name} ${r.name} - ${lp} LP`;
-}
-
 // --- FUNCIÓN DEL BOTÓN RESET ---
 function resetearZoom() {
     if (miGrafica) {
